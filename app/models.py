@@ -254,7 +254,18 @@ class Simulado(db.Model):
     # NULL/"manual" = digitado pelo dono; "import" = trazido do ranking da turma.
     # Registro manual nunca é sobrescrito por importação.
     origem = db.Column(db.String(10), nullable=True)
+    # Linha do ranking da turma que gerou este simulado, quando trazido pela
+    # Sincronização em lote (Fase C). É o que garante idempotência: sincronizar
+    # duas vezes não duplica, porque a segunda vez encontra o par já gravado
+    # aqui e pula a linha. NULL para simulados digitados à mão.
+    turma_linha_id = db.Column(
+        db.Integer, db.ForeignKey("simulado_turma_linhas.id"), nullable=True, index=True
+    )
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "turma_linha_id", name="uq_simulados_user_turma_linha"),
+    )
 
     @property
     def veio_de_import(self) -> bool:

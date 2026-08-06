@@ -4,7 +4,10 @@
 {% block content %}
 <div class="page-head">
   <h1>Meus simulados</h1>
-  <a class="btn btn-primary btn-sm show-desktop" href="{{ url_for('simulados.novo') }}">+ Novo simulado</a>
+  <div>
+    <a class="btn btn-outline btn-sm show-desktop" href="{{ url_for('simulados.sincronizar') }}">Sincronizar</a>
+    <a class="btn btn-primary btn-sm show-desktop" href="{{ url_for('simulados.novo') }}">+ Novo simulado</a>
+  </div>
 </div>
 
 <a class="card treino-link" href="{{ url_for('simulados.turma_listar') }}">

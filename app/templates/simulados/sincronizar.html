@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Sincronizar simulados — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Sincronizar simulados</h1>
+</div>
+
+<p class="card-sub">
+  Traz para os seus simulados tudo em que você aparece nos rankings da turma e
+  ainda não trouxe. Só adiciona — nunca apaga nem sobrescreve um registro que
+  você já digitou à mão.
+</p>
+
+{% if not itens %}
+<section class="card empty-state">
+  <h2>Nada pendente</h2>
+  <p>Todos os rankings em que você aparece já foram trazidos para os seus simulados.</p>
+  <a class="btn btn-primary" href="{{ url_for('simulados.listar') }}">Voltar aos meus simulados</a>
+</section>
+{% else %}
+<form method="post" action="{{ url_for('simulados.sincronizar') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="card">
+    <h2 class="card-title">Vou adicionar {{ itens|length }} simulado(s)</h2>
+    <ul class="of-simples">
+      {% for item in itens %}
+      {% set ln = item.linha %}
+      {% set t = ln.turma_obj %}
+      <li>
+        <div class="form-group">
+          <label class="form-label">
+            {{ t.nome }} — {{ t.data.strftime("%d/%m/%Y") }}
+            {%- if not item.sugestao %} <span class="serie-chip">escolha o concurso</span>{% endif %}
+          </label>
+          <select class="input" name="concurso_{{ ln.id }}">
+            <option value="">— não sincronizar esta —</option>
+            {% for c in concursos %}
+            <option value="{{ c.id }}" {% if item.sugestao and item.sugestao.id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    <button type="submit" class="btn btn-primary btn-block">Confirmar sincronização</button>
+  </section>
+</form>
+{% endif %}
+
+<div class="form-actions">
+  <a class="btn btn-ghost btn-block" href="{{ url_for('simulados.listar') }}">Voltar</a>
+</div>
+{% endblock %}

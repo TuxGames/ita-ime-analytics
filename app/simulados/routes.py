@@ -30,6 +30,7 @@ from ..models import (
     utcnow,
 )
 from ..oficiais_import import ErroImport
+from ..simulado_sync import concursos_por_banca, linhas_pendentes, sincronizar_linha, sugerir_concurso
 from ..simulado_turma_import import aplicar as aplicar_turma
 from ..simulado_turma_import import parse as parse_turma
 from ..validacao import (
@@ -230,6 +231,57 @@ def deletar(simulado_id):
     db.session.commit()
     flash("Simulado excluído.", "success")
     return redirect(url_for("simulados.listar"))
+
+
+# --------------------------------------------------------------------------
+# Sincronização em lote (Fase C): traz TODAS as linhas pendentes do usuário.
+# --------------------------------------------------------------------------
+
+
+@simulados_bp.route("/sincronizar", methods=["GET", "POST"])
+@login_required
+def sincronizar():
+    """Versão em lote do `turma_trazer`: só adiciona, nunca apaga/sobrescreve.
+
+    GET mostra o preview (linhas pendentes + concurso sugerido, editável por
+    linha). POST grava o que foi confirmado; linha sem concurso escolhido ou
+    já sincronizada fica de fora, sem travar as demais."""
+    mapa_bancas = concursos_por_banca()
+    pendentes = linhas_pendentes(current_user.id)
+
+    if request.method == "POST":
+        sincronizados, pulados = 0, 0
+        for linha in pendentes:
+            concurso_id = request.form.get(f"concurso_{linha.id}", type=int)
+            concurso = db.session.get(Concurso, concurso_id) if concurso_id else None
+            if concurso is None:
+                pulados += 1
+                continue
+            resultado = sincronizar_linha(linha, concurso, current_user.id)
+            if resultado is None:
+                pulados += 1
+            else:
+                sincronizados += 1
+        db.session.commit()
+        if sincronizados:
+            flash(
+                f"{sincronizados} simulado(s) sincronizado(s)"
+                + (f", {pulados} pulado(s)." if pulados else "."),
+                "success",
+            )
+        else:
+            flash("Nada para sincronizar — nenhuma linha com concurso escolhido.", "info")
+        return redirect(url_for("simulados.listar"))
+
+    itens = [
+        {"linha": linha, "sugestao": sugerir_concurso(linha, mapa_bancas)}
+        for linha in pendentes
+    ]
+    return render_template(
+        "simulados/sincronizar.html",
+        itens=itens,
+        concursos=_concursos_ordenados(),
+    )
 
 
 # --------------------------------------------------------------------------
