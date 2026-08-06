@@ -16,9 +16,11 @@ from ..alunos import (
     mesclar,
 )
 from ..decorators import admin_required
+from ..evolucao import evolucao_do_aluno
 from ..extensions import db
 from ..forms import AlunoForm
 from ..models import (
+    MATERIAS_SIMULADO,
     TURMA_CURTO,
     TURMAS,
     Aluno,
@@ -28,6 +30,7 @@ from ..models import (
     normalizar_nome,
     turma_valida,
 )
+from ..oficiais_import import materias_da_query
 from ..vinculo import revincular
 
 admin_bp = Blueprint("admin", __name__)
@@ -166,6 +169,21 @@ def aluno_detalhe(aluno_id):
             linhas[SimuladoTurmaLinha], key=lambda ln: ln.turma_obj.data, reverse=True
         ),
         linhas_oficiais=linhas[ResultadoLinha],
+    )
+
+
+@admin_bp.route("/alunos/<int:aluno_id>/evolucao")
+@admin_required
+def aluno_evolucao(aluno_id):
+    """Mesma visão de evolução do usuário (Fase E), sobre um aluno qualquer."""
+    aluno = _get_aluno(aluno_id)
+    recorte = materias_da_query(request.args.get("materias"), MATERIAS_SIMULADO)
+    dados = evolucao_do_aluno(aluno.id, recorte)
+    return render_template(
+        "evolucao.html",
+        titulo=f"Evolução — {aluno.nome}",
+        dados_js=dados,
+        voltar_url=url_for("admin.aluno_detalhe", aluno_id=aluno.id),
     )
 
 

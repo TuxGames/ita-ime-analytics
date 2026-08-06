@@ -4,16 +4,20 @@ from datetime import date
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from ..evolucao import evolucao_do_aluno
 from ..extensions import db
 from ..forms import MateriasPerfilForm, NomeOficialForm
 from ..models import (
+    Aluno,
     Concurso,
+    MATERIAS_SIMULADO,
     Materia,
     ResultadoLinha,
     Simulado,
     SimuladoTurmaLinha,
     normalizar_nome,
 )
+from ..oficiais_import import materias_da_query
 from ..vinculo import nome_ja_usado, revincular
 
 main_bp = Blueprint("main", __name__)
@@ -254,4 +258,25 @@ def perfil():
         materias_form=materias_form,
         total_oficiais=total_oficiais,
         total_rankings=total_rankings,
+    )
+
+
+@main_bp.route("/evolucao")
+@login_required
+def evolucao():
+    """Evolução do próprio usuário ao longo dos simulados da turma (Fase E).
+
+    Respeita o mesmo filtro de matérias do ranking (Fase D): ?materias=... ou,
+    sem query, o recorte do perfil."""
+    aluno = db.session.scalar(db.select(Aluno).filter_by(user_id=current_user.id))
+    recorte = materias_da_query(request.args.get("materias"), MATERIAS_SIMULADO)
+    if recorte is None:
+        recorte = current_user.materias or None
+
+    dados = evolucao_do_aluno(aluno.id, recorte) if aluno else None
+    return render_template(
+        "evolucao.html",
+        titulo=f"Evolução — {current_user.username}",
+        dados_js=dados,
+        voltar_url=url_for("main.dashboard"),
     )

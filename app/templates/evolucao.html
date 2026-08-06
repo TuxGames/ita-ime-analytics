@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ titulo }}</h1>
+</div>
+
+{% if not dados_js or not dados_js.tem_dado %}
+<section class="card empty-state">
+  <h2>Sem simulados da turma ainda</h2>
+  <p>Assim que aparecer em algum ranking de simulado da turma, a evolução aparece aqui.</p>
+  <a class="btn btn-outline" href="{{ voltar_url }}">Voltar</a>
+</section>
+{% else %}
+
+<div class="charts-grid">
+  <section class="card">
+    <h2 class="card-title">Percentil na turma</h2>
+    <p class="card-sub">100 = melhor colocação da prova, 0 = pior. Linha pontilhada = tendência.</p>
+    <div class="chart-box"><canvas id="chart-percentil" role="img" aria-label="Gráfico de linha com o percentil na turma ao longo dos simulados"></canvas></div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Acertos por matéria (%)</h2>
+    <details class="materia-toggle">
+      <summary>Matérias exibidas</summary>
+      <div id="materia-checks" class="check-inline"></div>
+    </details>
+    <div class="chart-box chart-box-tall"><canvas id="chart-materias" role="img" aria-label="Gráfico de linhas com o percentual de acertos por matéria ao longo dos simulados"></canvas></div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Você x mediana da turma</h2>
+    <p class="card-sub">Escolha a matéria: linha cheia é você, tracejada é a mediana da turma naquela prova.</p>
+    <select class="input input-sm" id="materia-comparacao"></select>
+    <div class="chart-box"><canvas id="chart-comparacao" role="img" aria-label="Gráfico comparando o desempenho do aluno com a mediana da turma numa matéria"></canvas></div>
+  </section>
+</div>
+
+<script type="application/json" id="evolucao-data">{{ dados_js|tojson }}</script>
+{% endif %}
+
+<div class="form-actions">
+  <a class="btn btn-ghost btn-block" href="{{ voltar_url }}">Voltar</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if dados_js and dados_js.tem_dado %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/evolucao.js') }}" defer></script>
+{% endif %}
+{% endblock %}

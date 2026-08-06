@@ -24,7 +24,7 @@ from .validacao import (
 # Reexportada por compatibilidade: `simulado_turma_import.py` (e outros pontos
 # do app) importa ErroImport daqui — ela mora de fato em validacao.py, junto
 # com o resto da lógica compartilhada entre import e edição manual.
-__all__ = ["ErroImport", "materia_por_codigo", "parse", "aplicar"]
+__all__ = ["ErroImport", "materia_por_codigo", "materias_da_query", "parse", "aplicar"]
 
 TIPOS_SUPORTADOS = ("oficial",)
 
@@ -44,6 +44,28 @@ _ALIAS_MATERIA = {
 def materia_por_codigo(codigo):
     """Materia a partir de 'MAT', 'Matemática', 'QUÍM'... ou None."""
     return _ALIAS_MATERIA.get(normalizar_nome(codigo).replace(" ", ""))
+
+
+def materias_da_query(bruto: str, universo: list) -> list | None:
+    """`?materias=MAT,FIS,QUIM` -> [Materia, ...] restrito ao `universo` dado.
+
+    Compartilhado entre o filtro do ranking (Fase D) e o filtro da evolução
+    (Fase E) — mesmo padrão de query string nos dois lugares. "TODAS" (sem
+    diferenciar caixa) é o escape explícito para ignorar qualquer default e
+    ver tudo. Código desconhecido ou fora do universo é ignorado silenciosamente
+    — mesmo espírito de `turma_valida`: link errado cai no default, não quebra
+    a página. None = nada de útil no parâmetro (quem chamou decide o default)."""
+    if not bruto:
+        return None
+    if normalizar_nome(bruto) == "TODAS":
+        return list(universo)
+    escolhidas = set()
+    for codigo in bruto.split(","):
+        materia = materia_por_codigo(codigo)
+        if materia is not None:
+            escolhidas.add(materia)
+    recorte = [m for m in universo if m in escolhidas]
+    return recorte or None
 
 
 def _numero(valor, campo):

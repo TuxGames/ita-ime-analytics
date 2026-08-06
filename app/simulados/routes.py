@@ -29,7 +29,7 @@ from ..models import (
     turma_valida,
     utcnow,
 )
-from ..oficiais_import import ErroImport, materia_por_codigo
+from ..oficiais_import import ErroImport, materias_da_query
 from ..simulado_sync import concursos_por_banca, linhas_pendentes, sincronizar_linha, sugerir_concurso
 from ..simulado_turma_import import aplicar as aplicar_turma
 from ..simulado_turma_import import parse as parse_turma
@@ -336,25 +336,6 @@ def _get_turma(turma_id: int) -> SimuladoTurma:
     return turma
 
 
-def _materias_da_query(bruto: str, materias_prova: list) -> list | None:
-    """`?materias=MAT,FIS,QUIM` -> [Materia, ...] dentro do que a prova mediu.
-
-    "TODAS" (sem diferenciar caixa) é o escape explícito para "ver tudo",
-    mesmo quando o perfil tem preferência cadastrada. Código desconhecido ou
-    fora da prova é ignorado silenciosamente — mesmo espírito de turma_valida:
-    link errado cai no default, não quebra a página. None = nada de útil no
-    parâmetro (deixa quem chamou decidir o default)."""
-    if not bruto:
-        return None
-    if normalizar_nome(bruto) == "TODAS":
-        return list(materias_prova)
-    escolhidas = set()
-    for codigo in bruto.split(","):
-        materia = materia_por_codigo(codigo)
-        if materia is not None:
-            escolhidas.add(materia)
-    recorte = [m for m in materias_prova if m in escolhidas]
-    return recorte or None
 
 
 @simulados_bp.route("/turma/")
@@ -463,7 +444,7 @@ def turma_detalhe(turma_id):
     # Recorte "mostrar apenas" (D.2): a query string manda; sem query, o
     # default são as matérias do perfil (interseção com as desta prova); sem
     # perfil cadastrado, cai na régua oficial de sempre.
-    recorte_query = _materias_da_query(request.args.get("materias"), materias)
+    recorte_query = materias_da_query(request.args.get("materias"), materias)
     if recorte_query is not None:
         recorte = recorte_query
     else:

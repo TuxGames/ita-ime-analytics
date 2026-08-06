@@ -32,6 +32,7 @@
   {% else %}
   <p class="card-sub">Nenhuma conta vinculada — ninguém reivindicou este nome ainda.</p>
   {% endif %}
+  <a class="btn btn-outline btn-sm" href="{{ url_for('admin.aluno_evolucao', aluno_id=aluno.id) }}">Ver evolução</a>
 </section>
 
 <section class="card">
