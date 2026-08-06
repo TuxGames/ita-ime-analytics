@@ -345,6 +345,17 @@ class NomeOficialForm(FlaskForm):
     )
 
 
+class MateriasPerfilForm(FlaskForm):
+    """Matérias que o usuário quer acompanhar de perto (default do filtro do
+    ranking, Fase D). Usa MATERIAS_SIMULADO — as 8 acadêmicas, sem "Outros"."""
+
+    materias = MultiCheckboxField(
+        "Matérias que você quer acompanhar",
+        choices=[(m.name, m.value) for m in MATERIAS_SIMULADO],
+        validators=[Optional()],
+    )
+
+
 class ConcursoForm(FlaskForm):
     banca = StringField(
         "Banca / concurso",

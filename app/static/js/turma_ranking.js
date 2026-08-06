@@ -149,20 +149,5 @@
     });
   });
 
-  var seletor = document.getElementById("preset-concurso");
-  if (seletor) {
-    Object.keys(dados.porConcurso || {}).forEach(function (nome) {
-      var opcao = document.createElement("option");
-      opcao.value = nome;
-      opcao.textContent = nome;
-      seletor.appendChild(opcao);
-    });
-    seletor.addEventListener("change", function () {
-      var nomes = dados.porConcurso[seletor.value];
-      if (nomes) marcar(nomes);
-      seletor.value = "";
-    });
-  }
-
   aplicar();
 })();

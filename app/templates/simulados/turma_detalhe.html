@@ -108,13 +108,21 @@
     <button type="button" class="btn btn-outline btn-sm" data-preset="oficial">Oficial</button>
     {% endif %}
     <button type="button" class="btn btn-outline btn-sm" data-preset="tudo">Tudo</button>
-    <select class="input input-sm" id="preset-concurso" aria-label="Usar as matérias de um concurso">
-      <option value="">Meu concurso…</option>
-    </select>
   </div>
 
   <div class="recorte-checks" id="recorte-checks" role="group" aria-label="Matérias do recorte"></div>
 </section>
+
+{% if filtro_materias_ativo %}
+<section class="card aviso-recorte">
+  <p class="card-sub">
+    Classificação filtrada pelas suas matérias — <strong>não é a mesma lista
+    completa</strong> nem a MÉDIA oficial do colégio (aquela conta com todas as
+    matérias da prova).
+    <a href="{{ url_for('simulados.turma_detalhe', turma_id=t.id, turma=filtro, materias='TODAS') }}">Ver com todas as matérias</a>.
+  </p>
+</section>
+{% endif %}
 
 <section class="card">
   <div class="card-head-row">
@@ -122,9 +130,9 @@
     <span class="card-sub-inline">{{ t.presentes(filtro)|length }} fizeram</span>
   </div>
   <ul class="of-linhas" id="ranking-lista">
-    {# Render inicial (recorte padrão, já dentro do filtro de turma). O JS refaz
-       esta lista a cada mudança de matéria, renumerando do 1º. #}
-    {% for pos, ln, nota in t.ranking(t.materias_media or materias, filtro) %}
+    {# Render inicial (recorte da query/perfil, já dentro do filtro de turma).
+       O JS refaz esta lista a cada mudança de matéria, renumerando do 1º. #}
+    {% for pos, ln, nota in t.ranking(recorte, filtro) %}
     <li class="of-linha {{ 'of-linha-eu' if ln.user_id == current_user.id else '' }}"
         data-id="{{ ln.id }}">
       <div class="of-linha-head">

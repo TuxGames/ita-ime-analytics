@@ -32,6 +32,7 @@
   </p>
   <form method="post" novalidate>
     {{ form.hidden_tag() }}
+    <input type="hidden" name="acao" value="nome">
     <div class="form-group">
       {{ form.nome_oficial(class="input" + (" input-error" if form.nome_oficial.errors else ""),
                            placeholder="Ex.: ARTHUR TELES VILA NOVA",
@@ -39,6 +40,27 @@
       {% for e in form.nome_oficial.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
     </div>
     <button type="submit" class="btn btn-primary btn-block">Salvar nome</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2 class="card-title">Suas matérias</h2>
+  <p class="card-sub">
+    Usadas como recorte padrão do ranking da turma ("mostrar apenas"). Deixe
+    tudo desmarcado para ver todas as matérias por padrão.
+  </p>
+  <form method="post" novalidate>
+    {{ materias_form.hidden_tag() }}
+    <input type="hidden" name="acao" value="materias">
+    <div class="recorte-checks" role="group" aria-label="Suas matérias">
+      {% for subcampo in materias_form.materias %}
+      <label class="recorte-opt">
+        {{ subcampo }}
+        <span>{{ subcampo.label.text }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-outline btn-block">Salvar matérias</button>
   </form>
 </section>
 

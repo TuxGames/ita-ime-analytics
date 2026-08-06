@@ -98,6 +98,11 @@ class User(UserMixin, db.Model):
     # Nome completo como aparece nos listões dos concursos. É o que liga este
     # usuário às linhas dos resultados oficiais importados pelo admin.
     nome_oficial = db.Column(db.String(120), nullable=True)
+    # Matérias que o usuário quer acompanhar de perto (filtro "mostrar apenas"
+    # do ranking, Fase D). Mesma convenção de Concurso.materias_csv: nomes do
+    # enum Materia separados por vírgula. NULL/vazio = sem preferência
+    # cadastrada (o ranking usa "todas" como default nesse caso).
+    materias_csv = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
 
     simulados = db.relationship("Simulado", back_populates="user", lazy="dynamic")
@@ -107,6 +112,17 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password: str) -> bool:
         return bcrypt.check_password_hash(self.password_hash, password)
+
+    @property
+    def materias(self) -> list["Materia"]:
+        """Lista de Materia do perfil, na ordem canônica do enum. Vazio = sem preferência."""
+        nomes = {n for n in (self.materias_csv or "").split(",") if n in Materia.__members__}
+        return [m for m in Materia if m.name in nomes]
+
+    def set_materias(self, materias) -> None:
+        """Grava a lista de Materia escolhida (ordena pelo enum, ignora duplicatas)."""
+        escolhidas = {m.name for m in materias}
+        self.materias_csv = ",".join(m.name for m in Materia if m.name in escolhidas) or None
 
     def __repr__(self):
         return f"<User {self.username}>"

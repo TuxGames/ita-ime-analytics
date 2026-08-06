@@ -29,7 +29,7 @@ from ..models import (
     turma_valida,
     utcnow,
 )
-from ..oficiais_import import ErroImport
+from ..oficiais_import import ErroImport, materia_por_codigo
 from ..simulado_sync import concursos_por_banca, linhas_pendentes, sincronizar_linha, sugerir_concurso
 from ..simulado_turma_import import aplicar as aplicar_turma
 from ..simulado_turma_import import parse as parse_turma
@@ -336,6 +336,27 @@ def _get_turma(turma_id: int) -> SimuladoTurma:
     return turma
 
 
+def _materias_da_query(bruto: str, materias_prova: list) -> list | None:
+    """`?materias=MAT,FIS,QUIM` -> [Materia, ...] dentro do que a prova mediu.
+
+    "TODAS" (sem diferenciar caixa) é o escape explícito para "ver tudo",
+    mesmo quando o perfil tem preferência cadastrada. Código desconhecido ou
+    fora da prova é ignorado silenciosamente — mesmo espírito de turma_valida:
+    link errado cai no default, não quebra a página. None = nada de útil no
+    parâmetro (deixa quem chamou decidir o default)."""
+    if not bruto:
+        return None
+    if normalizar_nome(bruto) == "TODAS":
+        return list(materias_prova)
+    escolhidas = set()
+    for codigo in bruto.split(","):
+        materia = materia_por_codigo(codigo)
+        if materia is not None:
+            escolhidas.add(materia)
+    recorte = [m for m in materias_prova if m in escolhidas]
+    return recorte or None
+
+
 @simulados_bp.route("/turma/")
 @login_required
 def turma_listar():
@@ -431,21 +452,28 @@ def turma_importar():
 def turma_detalhe(turma_id):
     turma = _get_turma(turma_id)
     materias = turma.materias
-    # Filtro por query string: link compartilhável e servidor como fonte da
-    # verdade. Valor inválido cai em "Todos" silenciosamente.
+    # Filtro de turma por query string: link compartilhável e servidor como
+    # fonte da verdade. Valor inválido cai em "Todos" silenciosamente.
     filtro = turma_valida(request.args.get("turma"))
 
-    # Padrão do recorte: as matérias da MÉDIA oficial; se o listão não disser,
-    # todas as matérias da prova.
-    padrao = turma.materias_media or materias
+    # Matérias da MÉDIA oficial do colégio; se o listão não disser, todas as
+    # matérias da prova. É a régua "oficial" — o atalho Oficial usa ela.
+    padrao_oficial = turma.materias_media or materias
 
-    # Matérias do concurso alvo do usuário, para o atalho "Meu concurso":
-    # a interseção entre o que o concurso cobra e o que esta prova mediu.
-    do_concurso = {}
-    for concurso in db.session.scalars(db.select(Concurso).order_by(Concurso.data_prova)):
-        nomes = [m.name for m in concurso.materias if m in materias]
-        if nomes:
-            do_concurso[concurso.nome] = nomes
+    # Recorte "mostrar apenas" (D.2): a query string manda; sem query, o
+    # default são as matérias do perfil (interseção com as desta prova); sem
+    # perfil cadastrado, cai na régua oficial de sempre.
+    recorte_query = _materias_da_query(request.args.get("materias"), materias)
+    if recorte_query is not None:
+        recorte = recorte_query
+    else:
+        do_perfil = [m for m in current_user.materias if m in materias]
+        recorte = do_perfil or padrao_oficial
+
+    # Com o recorte diferente da régua oficial, o número mostrado deixa de ser
+    # a MÉDIA do colégio — é outra classificação, e a tela precisa deixar isso
+    # explícito (D.2, "consequência obrigatória").
+    filtro_materias_ativo = {m.name for m in recorte} != {m.name for m in padrao_oficial}
 
     minha_linha = next(
         (ln for ln in turma.linhas if ln.user_id == current_user.id), None
@@ -463,8 +491,7 @@ def turma_detalhe(turma_id):
     dados_js = {
         "questoes": turma.questoes,
         "materias": [{"name": m.name, "label": m.value} for m in materias],
-        "padrao": [m.name for m in padrao],
-        "porConcurso": do_concurso,
+        "padrao": [m.name for m in recorte],
         "chave": f"itaime_recorte_{turma.banca}",
         "linhas": [
             {"id": ln.id, "acertos": ln.acertos, "eu": ln.user_id == current_user.id}
@@ -476,6 +503,8 @@ def turma_detalhe(turma_id):
         "simulados/turma_detalhe.html",
         t=turma,
         materias=materias,
+        recorte=recorte,
+        filtro_materias_ativo=filtro_materias_ativo,
         dados_js=dados_js,
         minha_linha=minha_linha,
         meu_simulado=meu_simulado,

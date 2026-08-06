@@ -5,7 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from ..extensions import db
-from ..forms import NomeOficialForm
+from ..forms import MateriasPerfilForm, NomeOficialForm
 from ..models import (
     Concurso,
     Materia,
@@ -212,8 +212,15 @@ def perfil():
         db.select(db.func.count(Simulado.id)).filter_by(user_id=current_user.id)
     )
     form = NomeOficialForm()
+    materias_form = MateriasPerfilForm()
 
-    if form.validate_on_submit():
+    if request.form.get("acao") == "materias" and materias_form.validate_on_submit():
+        current_user.set_materias([Materia[n] for n in materias_form.materias.data or []])
+        db.session.commit()
+        flash("Matérias do perfil atualizadas.", "success")
+        return redirect(url_for("main.perfil"))
+
+    if request.form.get("acao") != "materias" and form.validate_on_submit():
         nome = (form.nome_oficial.data or "").strip()
         chave = normalizar_nome(nome)
         if chave and nome_ja_usado(chave, current_user.id):
@@ -232,6 +239,7 @@ def perfil():
 
     if request.method == "GET":
         form.nome_oficial.data = current_user.nome_oficial
+        materias_form.materias.data = [m.name for m in current_user.materias]
 
     total_oficiais = db.session.scalar(
         db.select(db.func.count(ResultadoLinha.id)).filter_by(user_id=current_user.id)
@@ -243,6 +251,7 @@ def perfil():
         "perfil.html",
         total_simulados=total_simulados,
         form=form,
+        materias_form=materias_form,
         total_oficiais=total_oficiais,
         total_rankings=total_rankings,
     )
