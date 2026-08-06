@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ rotulo }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ rotulo }}</h1>
+    <p class="page-sub">{{ itens|length }} aluno(s)</p>
+  </div>
+</div>
+
+<nav class="filtro-turma" aria-label="Ordenar a lista">
+  <a class="filtro-chip {{ 'filtro-ativo' if ordem == 'nome' else '' }}"
+     href="{{ url_for('admin.alunos_da_turma', turma=turma or 'sem-turma', ordem='nome') }}"
+     {% if ordem == 'nome' %}aria-current="true"{% endif %}>Por nome</a>
+  <a class="filtro-chip {{ 'filtro-ativo' if ordem == 'media' else '' }}"
+     href="{{ url_for('admin.alunos_da_turma', turma=turma or 'sem-turma', ordem='media') }}"
+     {% if ordem == 'media' %}aria-current="true"{% endif %}>Por média</a>
+</nav>
+
+{% if not itens %}
+<section class="card empty-state">
+  <h2>Nenhum aluno aqui</h2>
+  <p>Os alunos aparecem sozinhos conforme os rankings e listões são importados.</p>
+</section>
+{% else %}
+<section class="card">
+  <ul class="of-linhas">
+    {% for item in itens %}
+    <li class="of-linha">
+      <a class="aluno-link" href="{{ url_for('admin.aluno_detalhe', aluno_id=item.aluno.id) }}">
+        <span class="of-linha-nome">{{ item.aluno.nome }}
+          {%- if item.aluno.serie %} <span class="serie-chip">{{ item.aluno.serie }}</span>{% endif %}
+          {%- if not item.aluno.ativo %} <span class="serie-chip">inativo</span>{% endif %}
+          {%- if item.aluno.user_id %} <span class="badge-eu">tem conta</span>{% endif %}
+        </span>
+        <span class="aluno-nums">
+          <span class="of-linha-mp">{{ item.simulados }} sim.</span>
+          <span class="of-linha-pos">{% if item.media is not none %}{{ "%.2f"|format(item.media) }}{% else %}—{% endif %}</span>
+        </span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="card-sub">A média é a do colégio (coluna MÉDIA das planilhas), não uma conta nossa.</p>
+</section>
+{% endif %}
+
+<div class="form-actions">
+  <a class="btn btn-ghost btn-block" href="{{ url_for('admin.turmas') }}">Voltar às turmas</a>
+</div>
+{% endblock %}

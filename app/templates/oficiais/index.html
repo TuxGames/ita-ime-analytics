@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Resultados oficiais — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Resultados oficiais</h1>
+  {% if current_user.is_admin %}
+  <a class="btn btn-primary btn-sm show-desktop" href="{{ url_for('oficiais.importar') }}">+ Importar</a>
+  {% endif %}
+</div>
+
+{% if not resultados %}
+<section class="card empty-state">
+  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M9 14.5L8 22l4-2 4 2-1-7.5"/></svg>
+  <h2>Nenhum resultado importado</h2>
+  <p>Aqui ficam os listões das provas reais (AFA, EFOMM...), com a posição de cada um.</p>
+  {% if current_user.is_admin %}
+  <a class="btn btn-primary" href="{{ url_for('oficiais.importar') }}">Importar o primeiro</a>
+  {% else %}
+  <p class="card-sub">O admin ainda não importou nenhum listão.</p>
+  {% endif %}
+</section>
+{% else %}
+
+{% if minhas %}
+<section class="card">
+  <h2 class="card-title">Seus resultados</h2>
+  <ul class="meus-of-list">
+    {% for ln in minhas %}
+    <li class="meus-of-item">
+      <a href="{{ url_for('oficiais.detalhe', resultado_id=ln.resultado_id, turma=ln.turma) }}">
+        <span class="meus-of-conc">{{ ln.resultado.concurso_nome }}
+          <span class="serie-chip">{{ ln.turma_curto }}</span>
+        </span>
+        {% if ln.status == "classificado" %}
+        <span class="meus-of-pos">#{{ ln.classificacao }}</span>
+        {% else %}
+        <span class="meus-of-status">{{ ln.status_label }}</span>
+        {% endif %}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% elif sem_nome %}
+<section class="card info-card">
+  <p><strong>Não achamos você nos listões.</strong> Diga qual é o seu nome completo nas listas
+    <a href="{{ url_for('main.perfil') }}">no seu perfil</a> — aí seus resultados aparecem aqui
+    automaticamente. Ou abra um listão abaixo e clique em “sou eu”.</p>
+</section>
+{% endif %}
+
+<ul class="cards-list">
+  {% for r in resultados %}
+  <li>
+    <a class="card of-card" href="{{ url_for('oficiais.detalhe', resultado_id=r.id) }}">
+      <div class="of-card-top">
+        <div>
+          <p class="of-conc">{{ r.concurso_nome }}</p>
+          <p class="of-turma">
+            {% for t in r.turmas_presentes %}
+            {{ r.total_de(t) }} {{ TURMA_CURTO[t]|lower }}{% if not loop.last %} · {% endif %}
+            {% endfor %}
+            {%- if r.fonte %} · {{ r.fonte }}{% endif %}
+          </p>
+        </div>
+        <div class="of-card-num">
+          <p class="of-num-value">{{ r.classificados()|length }}</p>
+          <p class="of-num-label">classificados</p>
+        </div>
+      </div>
+      <div class="chips">
+        {% if r.melhor_classificacao() %}<span class="chip chip-forte">melhor #{{ r.melhor_classificacao() }}</span>{% endif %}
+        <span class="chip">{{ r.linhas|length }} do colégio</span>
+        {% for m in r.materias %}<span class="chip">{{ m.value[:3] }}</span>{% endfor %}
+      </div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if current_user.is_admin %}
+<a class="fab hide-desktop" href="{{ url_for('oficiais.importar') }}" aria-label="Importar resultado oficial">
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+</a>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Estudos — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Estudos</h1>
+  <a class="btn btn-primary btn-sm show-desktop" href="{{ url_for('estudos.registrar') }}">+ Registrar</a>
+</div>
+
+<section class="card hoje-card">
+  <div class="hoje-head">
+    <div>
+      <p class="hoje-label">Hoje · {{ dia_semana_hoje }}</p>
+      <p class="hoje-data">{{ hoje.strftime("%d/%m/%Y") }}</p>
+    </div>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('estudos.registrar') }}">Registrar</a>
+  </div>
+  {% if planejado_hoje %}
+  <div class="chips">
+    {% for m in planejado_hoje %}<span class="chip">{{ m.value }}</span>{% endfor %}
+  </div>
+  {% else %}
+  <p class="hoje-vazio">Nenhuma matéria planejada para hoje. <a href="{{ url_for('estudos.plano') }}">Montar plano</a>.</p>
+  {% endif %}
+</section>
+
+<a class="card treino-link" href="{{ url_for('estudos.treino') }}">
+  <div class="treino-link-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>
+  </div>
+  <div class="treino-link-text">
+    <p class="treino-link-title">Treino de questões</p>
+    <p class="treino-link-sub">Cronômetro com tempo por questão e rollover</p>
+  </div>
+  <span class="treino-link-arrow" aria-hidden="true">›</span>
+</a>
+
+<section class="card">
+  <div class="card-head-row">
+    <h2 class="card-title">Esta semana</h2>
+    <span class="card-sub-inline">{{ semana_ini.strftime("%d/%m") }}–{{ semana_fim.strftime("%d/%m") }}</span>
+  </div>
+  {% if resumo.questoes %}
+  <div class="stats-grid stats-3">
+    <div class="stat"><p class="stat-value">{{ resumo.questoes }}</p><p class="stat-label">questões</p></div>
+    <div class="stat"><p class="stat-value">{{ resumo.acertos }}</p><p class="stat-label">acertos</p></div>
+    <div class="stat"><p class="stat-value">{{ resumo.percentual }}%</p><p class="stat-label">aproveitamento</p></div>
+  </div>
+  <div class="chart-box"><canvas id="chart-estudo" role="img" aria-label="Questões por matéria nesta semana"></canvas></div>
+  <script type="application/json" id="estudo-data">{{ resumo.por_materia|tojson }}</script>
+  {% else %}
+  <p class="empty-inline">Nenhum estudo registrado esta semana ainda.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head-row">
+    <h2 class="card-title">Plano da semana</h2>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('estudos.plano') }}">Editar</a>
+  </div>
+  <ul class="plano-list">
+    {% for i in range(7) %}
+    <li class="plano-dia {{ 'plano-hoje' if i == hoje.weekday() else '' }}">
+      <span class="plano-dia-nome">{{ dias_semana[i] }}</span>
+      {% if plano.get(i) %}
+      <span class="chips">
+        {% for m in plano[i] %}<span class="chip">{{ m.value }}</span>{% endfor %}
+      </span>
+      {% else %}
+      <span class="plano-dia-vazio">—</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<a class="fab hide-desktop" href="{{ url_for('estudos.registrar') }}" aria-label="Registrar estudo">
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+</a>
+{% endblock %}
+
+{% block scripts %}
+{% if resumo.questoes %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/estudos.js') }}" defer></script>
+{% endif %}
+{% endblock %}

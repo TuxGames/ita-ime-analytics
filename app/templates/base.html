@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1D3557">
+  <title>{% block title %}ITA-IME Analytics{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+{% from "_macros.html" import nav_icon %}
+{% set ep = request.endpoint or "" %}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url_for('main.dashboard') }}">ITA·IME <span>Analytics</span></a>
+    {% if current_user.is_authenticated %}
+    <nav class="topnav" aria-label="Navegação principal">
+      <a href="{{ url_for('main.dashboard') }}" {% if ep == "main.dashboard" %}aria-current="page"{% endif %}>Dashboard</a>
+      <a href="{{ url_for('simulados.listar') }}" {% if ep.startswith("simulados.") %}aria-current="page"{% endif %}>Simulados</a>
+      <a href="{{ url_for('estudos.index') }}" {% if ep.startswith("estudos.") %}aria-current="page"{% endif %}>Estudos</a>
+      <a href="{{ url_for('oficiais.index') }}" {% if ep.startswith("oficiais.") %}aria-current="page"{% endif %}>Oficiais</a>
+      <a href="{{ url_for('concursos.listar') }}" {% if ep.startswith("concursos.") %}aria-current="page"{% endif %}>Concursos</a>
+      <a href="{{ url_for('main.perfil') }}" {% if ep == "main.perfil" %}aria-current="page"{% endif %}>Perfil</a>
+    </nav>
+    {% endif %}
+  </div>
+</header>
+
+<main class="content" id="conteudo">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flashes" role="status">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+{% if current_user.is_authenticated %}
+<nav class="bottomnav" aria-label="Navegação principal">
+  <a href="{{ url_for('main.dashboard') }}" class="bottomnav-item" {% if ep == "main.dashboard" %}aria-current="page"{% endif %}>
+    {{ nav_icon("dashboard") }}<span>Dashboard</span>
+  </a>
+  <a href="{{ url_for('simulados.listar') }}" class="bottomnav-item" {% if ep.startswith("simulados.") %}aria-current="page"{% endif %}>
+    {{ nav_icon("simulados") }}<span>Simulados</span>
+  </a>
+  <a href="{{ url_for('estudos.index') }}" class="bottomnav-item" {% if ep.startswith("estudos.") %}aria-current="page"{% endif %}>
+    {{ nav_icon("estudos") }}<span>Estudos</span>
+  </a>
+  <a href="{{ url_for('oficiais.index') }}" class="bottomnav-item" {% if ep.startswith("oficiais.") %}aria-current="page"{% endif %}>
+    {{ nav_icon("oficiais") }}<span>Oficiais</span>
+  </a>
+  <a href="{{ url_for('concursos.listar') }}" class="bottomnav-item" {% if ep.startswith("concursos.") %}aria-current="page"{% endif %}>
+    {{ nav_icon("concursos") }}<span>Concursos</span>
+  </a>
+  <a href="{{ url_for('main.perfil') }}" class="bottomnav-item" {% if ep == "main.perfil" %}aria-current="page"{% endif %}>
+    {{ nav_icon("perfil") }}<span>Perfil</span>
+  </a>
+</nav>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

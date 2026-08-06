@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}Registrar estudo — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Registrar estudo</h1>
+</div>
+
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+
+  <div class="card form-card">
+    {{ field(form.data) }}
+  </div>
+
+  <div class="card form-card">
+    <h2 class="card-title">Questões por matéria</h2>
+    <p class="card-sub">Preencha as matérias que você estudou nesse dia. Deixe vazio pra não registrar.</p>
+    <div class="materias-grid" role="group" aria-label="Questões e acertos por matéria">
+      <p class="mg-head"></p><p class="mg-head">Questões</p><p class="mg-head">Acertos</p>
+      {% for enum_name, sub in form.materia_fields() %}
+      <label class="mg-label" for="{{ sub.questoes.id }}">{{ sub.label.text }}</label>
+      <div>
+        {{ sub.questoes(class="input input-mini" + (" input-error" if sub.questoes.errors else ""), inputmode="numeric", min="0", **{"aria-label": sub.label.text ~ " questões"}) }}
+      </div>
+      <div>
+        {{ sub.acertos(class="input input-mini" + (" input-error" if sub.acertos.errors else ""), inputmode="numeric", min="0", **{"aria-label": sub.label.text ~ " acertos"}) }}
+      </div>
+      {% for e in sub.questoes.errors + sub.acertos.errors %}
+      <p class="field-error mg-error">{{ sub.label.text }}: {{ e }}</p>
+      {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary btn-block">Salvar</button>
+    <a class="btn btn-ghost btn-block" href="{{ url_for('estudos.index') }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}{{ titulo }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ titulo }}</h1>
+</div>
+
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+
+  <div class="card form-card">
+    <h2 class="card-title">Dados gerais</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="banca-sel">Concurso</label>
+        <select class="input" id="banca-sel" aria-label="Banca do concurso">
+          {% for b in bancas %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="concurso_id">Fase / dia</label>
+        <select class="input{{ ' input-error' if form.concurso_id.errors else '' }}"
+                id="concurso_id" name="concurso_id"
+                data-selected="{{ form.concurso_id.data if form.concurso_id.data else '' }}">
+          {% for e in etapas %}
+          <option value="{{ e.id }}" data-banca="{{ e.banca }}">{{ e.label }}</option>
+          {% endfor %}
+        </select>
+        {% for err in form.concurso_id.errors %}<p class="field-error">{{ err }}</p>{% endfor %}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        {{ form.rotulo.label(class="form-label") }}
+        {{ form.rotulo(class="input" + (" input-error" if form.rotulo.errors else ""),
+                       list="rotulos-list", placeholder="Ex.: S3 (opcional)", maxlength="20") }}
+        {% for e in form.rotulo.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+        <datalist id="rotulos-list">
+          {% for r in rotulos %}<option value="{{ r }}"></option>{% endfor %}
+        </datalist>
+      </div>
+      {{ field(form.data_simulado) }}
+    </div>
+
+    <div class="form-group">
+      <span class="form-label">Nota geral</span>
+      <div class="radio-row" role="radiogroup" aria-label="Modo da nota geral">
+        {% for opt in form.modo_nota %}
+        <label class="radio-opt">{{ opt() }} <span>{{ opt.label.text }}</span></label>
+        {% endfor %}
+      </div>
+
+      <div id="nota-manual">
+        {{ form.nota_geral(class="input" + (" input-error" if form.nota_geral.errors else ""), inputmode="decimal", step="0.01", min="0", max="1000", **{"aria-label": "Nota geral (manual)"}) }}
+        {% for e in form.nota_geral.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+      </div>
+
+      <div id="nota-auto">
+        <p class="nota-auto-preview">Média: <strong id="media-preview">—</strong></p>
+        <p class="card-sub">Média simples dos % de acertos das matérias preenchidas (as vazias não contam).</p>
+        {% for e in form.modo_nota.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+      </div>
+    </div>
+
+    {{ field(form.posicao_estimada, inputmode="numeric", min="1", placeholder="opcional") }}
+  </div>
+
+  <div class="card form-card">
+    <h2 class="card-title">Desempenho por matéria</h2>
+    <p class="card-sub">Só aparecem as matérias que caem no concurso escolhido. Preencha as que o simulado teve.</p>
+    <div class="materias-grid" role="group" aria-label="Acertos por matéria">
+      <p class="mg-head"></p><p class="mg-head">Acertos</p><p class="mg-head">Total</p>
+      {% for enum_name, sub in form.materia_fields() %}
+      <label class="mg-label" data-materia="{{ enum_name }}" for="{{ sub.acertos.id }}">{{ sub.label.text }}</label>
+      <div data-materia="{{ enum_name }}">
+        {{ sub.acertos(class="input input-mini" + (" input-error" if sub.acertos.errors else ""), inputmode="numeric", min="0", **{"aria-label": sub.label.text ~ " acertos"}) }}
+      </div>
+      <div data-materia="{{ enum_name }}">
+        {{ sub.total_questoes(class="input input-mini" + (" input-error" if sub.total_questoes.errors else ""), inputmode="numeric", min="1", **{"aria-label": sub.label.text ~ " total de questões"}) }}
+      </div>
+      {% for e in sub.acertos.errors + sub.total_questoes.errors %}
+      <p class="field-error mg-error" data-materia="{{ enum_name }}">{{ sub.label.text }}: {{ e }}</p>
+      {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card form-card">
+    {{ field(form.observacao, rows="3", placeholder="O que aconteceu, errou por bobeira?") }}
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary btn-block">Salvar simulado</button>
+    <a class="btn btn-ghost btn-block" href="{{ url_for('simulados.listar') }}">Cancelar</a>
+  </div>
+</form>
+
+<script type="application/json" id="materias-map">{{ materias_map|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/simulado_form.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Importar resultado oficial — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Importar resultado</h1>
+</div>
+
+{% if preview %}
+{% set d = preview.dados %}
+{% set STATUS_LABEL = {"classificado": "Classificado",
+                       "sem_aproveitamento": "Sem aproveitamento",
+                       "nao_encontrado": "Não encontrado"} %}
+<section class="card">
+  <h2 class="card-title">Confira antes de gravar</h2>
+  {% if preview.substitui_turma %}
+  <p class="aviso-substitui">
+    A turma <strong>{{ d.turma }}</strong> de <strong>{{ d.concurso }}</strong> já foi
+    importada. Confirmar vai <strong>substituir só essa turma</strong>{% if preview.outras_turmas %},
+    mantendo intacta a turma {{ preview.outras_turmas|join(" e ") }}{% endif %}.
+  </p>
+  {% elif preview.concurso %}
+  <p class="aviso-substitui">
+    <strong>{{ d.concurso }}</strong> já tem a turma
+    {{ preview.outras_turmas|join(" e ") }}. Esta importação <strong>acrescenta</strong>
+    a turma {{ d.turma }} ao mesmo concurso.
+  </p>
+  {% endif %}
+
+  <ul class="preview-meta">
+    <li><span>Concurso</span><strong>{{ d.concurso }}</strong></li>
+    <li><span>Turma</span><strong>{{ d.turma }}</strong></li>
+    {% if d.fonte %}<li><span>Fonte</span><strong>{{ d.fonte }}</strong></li>{% endif %}
+    {% if d.data %}<li><span>Data</span><strong>{{ d.data.strftime("%d/%m/%Y") }}</strong></li>{% endif %}
+    <li><span>Escala</span><strong>0–{{ "%g"|format(d.escala) }}</strong></li>
+    {% if d.metrica %}<li><span>Métrica</span><strong>{{ d.metrica }}</strong></li>{% endif %}
+    <li><span>Matérias</span><strong>{% for m in d.materias %}{{ m.value }}{% if not loop.last %}, {% endif %}{% endfor %}</strong></li>
+  </ul>
+
+  <div class="stats-grid stats-3">
+    <div class="stat"><p class="stat-value">{{ d.resumo.classificado }}</p><p class="stat-label">classificados</p></div>
+    <div class="stat"><p class="stat-value">{{ d.resumo.sem_aproveitamento }}</p><p class="stat-label">sem aprov.</p></div>
+    <div class="stat"><p class="stat-value">{{ d.resumo.nao_encontrado }}</p><p class="stat-label">não encontr.</p></div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Pos.</th><th>Nome</th><th>Status</th>{% for m in d.materias %}<th>{{ m.value[:3] }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for ln in d.linhas %}
+        <tr>
+          <td class="td-nota">{% if ln.classificacao %}#{{ ln.classificacao }}{% else %}—{% endif %}</td>
+          <td>{{ ln.nome }}</td>
+          <td class="td-status">{{ STATUS_LABEL.get(ln.status, ln.status) }}</td>
+          {% for m in d.materias %}
+          <td>{% if ln.notas.get(m.name) is not none %}{{ "%.2f"|format(ln.notas[m.name]) }}{% else %}—{% endif %}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ form.payload(class="visually-hidden", tabindex="-1", **{"aria-hidden": "true"}) }}
+    <input type="hidden" name="acao" value="confirmar">
+    <button type="submit" class="btn btn-primary btn-block">
+      {% if preview.substitui %}Substituir resultado{% else %}Confirmar importação{% endif %}
+    </button>
+  </form>
+  <a class="btn btn-ghost btn-block" href="{{ url_for('oficiais.importar') }}">Cancelar e recomeçar</a>
+</section>
+
+{% else %}
+
+<section class="card">
+  <h2 class="card-title">1. Gere o JSON</h2>
+  <p class="card-sub">Mande o PDF/print do listão para o Claude junto com este prompt. Ele devolve o JSON já no formato certo — um por turma.</p>
+  <details class="prompt-box">
+    <summary>Ver o prompt de extração</summary>
+    <pre id="prompt-texto" class="prompt-pre">{{ prompt_extracao }}</pre>
+    <button type="button" class="btn btn-outline btn-sm" id="copiar-prompt">Copiar prompt</button>
+  </details>
+</section>
+
+<section class="card">
+  <h2 class="card-title">2. Cole aqui</h2>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      {{ form.payload(class="input input-mono" + (" input-error" if form.payload.errors else ""),
+                      rows="14", spellcheck="false",
+                      placeholder='{ "tipo": "oficial", "concurso": "AFA/EPCAR 2027", ... }') }}
+      {% for e in form.payload.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+    </div>
+    <input type="hidden" name="acao" value="validar">
+    <button type="submit" class="btn btn-primary btn-block">Validar e pré-visualizar</button>
+  </form>
+  <p class="card-sub">Nada é gravado antes de você conferir a prévia. Reimportar o mesmo concurso + turma substitui o anterior.</p>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/oficiais.js') }}" defer></script>
+{% endblock %}

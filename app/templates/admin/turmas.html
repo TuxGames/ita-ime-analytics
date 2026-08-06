@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Turmas — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Turmas</h1>
+    <p class="page-sub">{{ total_alunos }} aluno(s) no total</p>
+  </div>
+</div>
+
+{% if candidatos %}
+<section class="card info-card">
+  <p>
+    <strong>{{ candidatos }} par(es) de nomes parecidos.</strong> Nome vem de leitura
+    de planilha, então a mesma pessoa às vezes nasce duas vezes.
+    <a href="{{ url_for('admin.merge') }}">Revisar e juntar</a>.
+  </p>
+</section>
+{% endif %}
+
+<ul class="cards-list">
+  {% for g in grupos %}
+  <li>
+    <a class="card of-card" href="{{ url_for('admin.alunos_da_turma', turma=g.chave) }}">
+      <div class="of-card-top">
+        <div>
+          <p class="of-conc">{{ g.nome }}</p>
+          <p class="of-turma">ver lista de alunos</p>
+        </div>
+        <div class="of-card-num">
+          <p class="of-num-value">{{ g.total }}</p>
+          <p class="of-num-label">alunos</p>
+        </div>
+      </div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+<div class="form-actions">
+  <a class="btn btn-outline btn-block" href="{{ url_for('admin.merge') }}">Juntar alunos duplicados</a>
+</div>
+{% endblock %}

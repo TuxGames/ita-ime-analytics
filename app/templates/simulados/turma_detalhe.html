@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nome }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ t.banca }} {{ t.rotulo }}</h1>
+    <p class="page-sub">
+      {{ t.data.strftime("%d/%m/%Y") }}
+      {%- if t.fase != "objetiva" %} · {{ t.fase }}{% endif %}
+      {%- if t.fonte %} · {{ t.fonte }}{% endif %}
+    </p>
+  </div>
+</div>
+
+{% if turmas|length > 1 %}
+<nav class="filtro-turma" aria-label="Filtrar por turma">
+  <a class="filtro-chip {{ 'filtro-ativo' if not filtro else '' }}"
+     href="{{ url_for('simulados.turma_detalhe', turma_id=t.id) }}"
+     {% if not filtro %}aria-current="true"{% endif %}>Todos</a>
+  {% for turma in turmas %}
+  <a class="filtro-chip {{ 'filtro-ativo' if filtro == turma else '' }}"
+     href="{{ url_for('simulados.turma_detalhe', turma_id=t.id, turma=turma) }}"
+     {% if filtro == turma %}aria-current="true"{% endif %}>{{ TURMA_CURTO[turma] }}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+{% if minha_linha %}
+<section class="card meu-lugar">
+  <div class="meu-lugar-num">
+    <p class="meu-lugar-pos" id="minha-pos">—</p>
+    <p class="meu-lugar-label">sua posição</p>
+  </div>
+  <div class="meu-lugar-num">
+    <p class="meu-lugar-nota" id="minha-nota">—</p>
+    <p class="meu-lugar-label">sua nota (0–10)</p>
+  </div>
+  <div class="meu-lugar-num">
+    <p class="meu-lugar-nota" id="media-turma">—</p>
+    <p class="meu-lugar-label">média da turma</p>
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="card-head-row">
+    <h2 class="card-title">Matérias que contam</h2>
+    <span class="card-sub-inline" id="recorte-resumo"></span>
+  </div>
+  <p class="card-sub">
+    Marque as matérias e o ranking se refaz. A nota é a média dos percentuais de acerto,
+    em escala 0–10 — a mesma régua da 1ª fase do IME{% if t.banca|upper == "ITA" %} e, no ITA,
+    o mesmo número da MÉDIA do colégio{% endif %}.
+  </p>
+
+  <div class="recorte-presets">
+    {% if t.materias_media %}
+    <button type="button" class="btn btn-outline btn-sm" data-preset="oficial">Oficial</button>
+    {% endif %}
+    <button type="button" class="btn btn-outline btn-sm" data-preset="tudo">Tudo</button>
+    <select class="input input-sm" id="preset-concurso" aria-label="Usar as matérias de um concurso">
+      <option value="">Meu concurso…</option>
+    </select>
+  </div>
+
+  <div class="recorte-checks" id="recorte-checks" role="group" aria-label="Matérias do recorte"></div>
+</section>
+
+<section class="card">
+  <div class="card-head-row">
+    <h2 class="card-title">Ranking</h2>
+    <span class="card-sub-inline">{{ t.presentes(filtro)|length }} fizeram</span>
+  </div>
+  <ul class="of-linhas" id="ranking-lista">
+    {# Render inicial (recorte padrão, já dentro do filtro de turma). O JS refaz
+       esta lista a cada mudança de matéria, renumerando do 1º. #}
+    {% for pos, ln, nota in t.ranking(t.materias_media or materias, filtro) %}
+    <li class="of-linha {{ 'of-linha-eu' if ln.user_id == current_user.id else '' }}"
+        data-id="{{ ln.id }}">
+      <div class="of-linha-head">
+        <span class="of-linha-pos">{{ pos }}º</span>
+        <span class="of-linha-nome">{{ ln.nome }}
+          {%- if not filtro %} <span class="serie-chip">{{ ln.turma_curto }}</span>{% endif %}
+          {%- if ln.serie %} <span class="serie-chip">{{ ln.serie }}</span>{% endif %}
+          {%- if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}
+        </span>
+        <span class="of-linha-mp">{{ "%.2f"|format(nota) }}</span>
+      </div>
+      <div class="chips">
+        {% for m in materias %}
+        {% if ln.acertos.get(m.name) is not none %}
+        <span class="chip">{{ m.value[:3] }} {{ ln.acertos[m.name] }}/{{ t.questoes.get(m.name) }}</span>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% if ln.user_id is none %}
+      <form method="post" action="{{ url_for('simulados.turma_reivindicar', linha_id=ln.id) }}"
+            data-confirm="Vincular “{{ ln.nome }}” à sua conta?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="linklike">sou eu</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% if t.ausentes(filtro) %}
+<section class="card">
+  <h2 class="card-title">Não fizeram</h2>
+  <ul class="of-simples">
+    {% for ln in t.ausentes(filtro) %}
+    <li>
+      <span>{{ ln.nome }}
+        {%- if not filtro %} <span class="serie-chip">{{ ln.turma_curto }}</span>{% endif %}
+        {%- if ln.serie %} <span class="serie-chip">{{ ln.serie }}</span>{% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if minha_linha and minha_linha.status == "presente" %}
+<section class="card">
+  <h2 class="card-title">Trazer para os meus simulados</h2>
+  {% if meu_simulado and not meu_simulado.veio_de_import %}
+  <p class="card-sub">
+    Você já lançou o {{ t.rotulo }} à mão — não vou sobrescrever.
+    <a href="{{ url_for('simulados.detalhe', simulado_id=meu_simulado.id) }}">Ver o seu registro</a>.
+  </p>
+  {% else %}
+  <p class="card-sub">
+    {% if meu_simulado %}Atualiza{% else %}Cria{% endif %} um simulado seu com os acertos desta
+    prova. Sua observação nunca é alterada.
+  </p>
+  <form method="post" action="{{ url_for('simulados.turma_trazer', turma_id=t.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label class="form-label" for="concurso_id">Conta para qual concurso</label>
+      <select class="input" id="concurso_id" name="concurso_id" required>
+        {% for c in concursos %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">
+      {% if meu_simulado %}Atualizar meu {{ t.rotulo }}{% else %}Trazer {{ t.rotulo }}{% endif %}
+    </button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+<div class="form-actions">
+  {% if current_user.is_admin %}
+  {% for turma in turmas %}
+  <form method="post" action="{{ url_for('simulados.turma_excluir', turma_id=t.id) }}"
+        data-confirm="Excluir só a turma {{ TURMA_CURTO[turma]|lower }} de {{ t.nome }} ({{ t.total_de(turma) }} pessoas)?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="turma" value="{{ turma }}">
+    <button type="submit" class="btn btn-outline btn-block btn-perigo-suave">
+      Excluir só {{ TURMA_CURTO[turma]|lower }} ({{ t.total_de(turma) }})
+    </button>
+  </form>
+  {% endfor %}
+  <form method="post" action="{{ url_for('simulados.turma_excluir', turma_id=t.id) }}"
+        data-confirm="Excluir {{ t.nome }} INTEIRO, com todas as turmas ({{ t.linhas|length }} pessoas)? Essa ação não tem volta.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger btn-block">Excluir a prova inteira</button>
+  </form>
+  {% endif %}
+  <a class="btn btn-ghost btn-block" href="{{ url_for('simulados.turma_listar') }}">Voltar</a>
+</div>
+
+<script type="application/json" id="turma-data">{{ dados_js|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/turma_ranking.js') }}" defer></script>
+{% endblock %}

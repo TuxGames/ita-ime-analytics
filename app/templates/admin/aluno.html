@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}{{ aluno.nome }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ aluno.nome }}</h1>
+    <p class="page-sub">
+      {{ aluno.turma_curto }}
+      {%- if aluno.serie %} · {{ aluno.serie }}{% endif %}
+      {%- if not aluno.ativo %} · inativo{% endif %}
+    </p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="stats-grid stats-3">
+    <div class="stat">
+      <p class="stat-value">{{ resumo.simulados }}</p><p class="stat-label">simulados</p>
+    </div>
+    <div class="stat">
+      <p class="stat-value">{% if resumo.media is not none %}{{ "%.2f"|format(resumo.media) }}{% else %}—{% endif %}</p>
+      <p class="stat-label">média do colégio</p>
+    </div>
+    <div class="stat">
+      <p class="stat-value">{{ linhas_oficiais|length }}</p><p class="stat-label">listões</p>
+    </div>
+  </div>
+  {% if aluno.user %}
+  <p class="card-sub">Conta vinculada: <strong>{{ aluno.user.username }}</strong>.</p>
+  {% else %}
+  <p class="card-sub">Nenhuma conta vinculada — ninguém reivindicou este nome ainda.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2 class="card-title">Dados do aluno</h2>
+  <p class="card-sub">
+    Isto é o estado <strong>atual</strong>. O que a pessoa era em cada prova continua
+    guardado na linha daquela prova — é o histórico, e não muda aqui.
+  </p>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ field(form.nome) }}
+    <div class="form-row">
+      <div class="form-group">
+        {{ form.turma.label(class="form-label") }}
+        {{ form.turma(class="input") }}
+      </div>
+      {{ field(form.serie, placeholder="Ex.: 3º ANO") }}
+    </div>
+    <label class="radio-opt">{{ form.ativo() }} <span>Aluno ativo</span></label>
+    <button type="submit" class="btn btn-primary btn-block">Salvar</button>
+  </form>
+</section>
+
+{% if aluno.apelidos %}
+<section class="card">
+  <h2 class="card-title">Outras grafias deste nome</h2>
+  <p class="card-sub">Vindas de merges. Um import com qualquer uma delas cai neste aluno.</p>
+  <ul class="of-simples">
+    {% for ap in aluno.apelidos %}
+    <li>
+      <span>{{ ap.nome_norm }}{% if ap.origem %} <span class="serie-chip">{{ ap.origem }}</span>{% endif %}</span>
+      <form method="post" action="{{ url_for('admin.remover_apelido', aluno_id=aluno.id, apelido_id=ap.id) }}"
+            data-confirm="Soltar a grafia “{{ ap.nome_norm }}”? As linhas continuam aqui.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn-icon-del" aria-label="Remover apelido">×</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if linhas_ranking %}
+<section class="card">
+  <h2 class="card-title">Simulados</h2>
+  <ul class="of-linhas">
+    {% for ln in linhas_ranking %}
+    <li class="of-linha">
+      <div class="of-linha-head">
+        <span class="of-linha-nome">
+          <a href="{{ url_for('simulados.turma_detalhe', turma_id=ln.turma_id) }}">{{ ln.turma_obj.nome }}</a>
+          <span class="serie-chip">{{ ln.turma_curto }}</span>
+          {%- if ln.serie %} <span class="serie-chip">{{ ln.serie }}</span>{% endif %}
+          {%- if ln.status == "ausente" %} <span class="serie-chip">faltou</span>{% endif %}
+        </span>
+        {% if ln.media_oficial is not none %}<span class="of-linha-mp">{{ "%.2f"|format(ln.media_oficial) }}</span>{% endif %}
+      </div>
+      {% if ln.acertos %}
+      <div class="chips">
+        {% for m in ln.turma_obj.materias %}
+        {% if ln.acertos.get(m.name) is not none %}
+        <span class="chip">{{ m.value[:3] }} {{ ln.acertos[m.name] }}/{{ ln.turma_obj.questoes.get(m.name) }}</span>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if linhas_oficiais %}
+<section class="card">
+  <h2 class="card-title">Listões de concurso</h2>
+  <ul class="of-linhas">
+    {% for ln in linhas_oficiais %}
+    <li class="of-linha">
+      <div class="of-linha-head">
+        {% if ln.classificacao %}<span class="of-linha-pos">#{{ ln.classificacao }}</span>{% endif %}
+        <span class="of-linha-nome">
+          <a href="{{ url_for('oficiais.detalhe', resultado_id=ln.resultado_id) }}">{{ ln.resultado.concurso_nome }}</a>
+          <span class="serie-chip">{{ ln.turma_curto }}</span>
+        </span>
+        <span class="of-linha-mp">{{ ln.status_label }}</span>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<div class="form-actions">
+  <a class="btn btn-outline btn-block" href="{{ url_for('admin.merge') }}">Juntar com outro aluno</a>
+  <a class="btn btn-ghost btn-block"
+     href="{{ url_for('admin.alunos_da_turma', turma=aluno.turma or 'sem-turma') }}">Voltar à turma</a>
+</div>
+{% endblock %}

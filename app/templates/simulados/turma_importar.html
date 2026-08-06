@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Importar ranking — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Importar ranking</h1>
+</div>
+
+{% if preview %}
+{% set d = preview.dados %}
+<section class="card">
+  <h2 class="card-title">Confira antes de gravar</h2>
+  {% if preview.substitui_turma %}
+  <p class="aviso-substitui">
+    A turma <strong>{{ d.turma }}</strong> de <strong>{{ d.banca }} {{ d.rotulo }}</strong>
+    já foi importada. Confirmar vai <strong>substituir só essa turma</strong>{% if preview.outras_turmas %},
+    mantendo intacta a turma {{ preview.outras_turmas|join(" e ") }}{% endif %}.
+  </p>
+  {% elif preview.prova %}
+  <p class="aviso-substitui">
+    <strong>{{ d.banca }} {{ d.rotulo }}</strong> já tem a turma
+    {{ preview.outras_turmas|join(" e ") }}. Esta importação <strong>acrescenta</strong>
+    a turma {{ d.turma }} à mesma prova.
+  </p>
+  {% endif %}
+
+  <ul class="preview-meta">
+    <li><span>Prova</span><strong>{{ d.banca }} {{ d.rotulo }}</strong></li>
+    <li><span>Data</span><strong>{{ d.data.strftime("%d/%m/%Y") }}</strong></li>
+    <li><span>Fase</span><strong>{{ d.fase }}</strong></li>
+    <li><span>Turma</span><strong>{{ d.turma }}</strong></li>
+    {% if d.fonte %}<li><span>Fonte</span><strong>{{ d.fonte }}</strong></li>{% endif %}
+    <li>
+      <span>Questões</span>
+      <strong>{% for m in d.materias %}{{ m.value[:3] }} {{ d.questoes[m.name] }}{% if not loop.last %} · {% endif %}{% endfor %}</strong>
+    </li>
+    {% if d.materias_media %}
+    <li>
+      <span>MÉDIA oficial</span>
+      <strong>{% for m in d.materias_media %}{{ m.value }}{% if not loop.last %} + {% endif %}{% endfor %}</strong>
+    </li>
+    {% endif %}
+  </ul>
+
+  <div class="stats-grid stats-3">
+    <div class="stat"><p class="stat-value">{{ d.resumo.presente }}</p><p class="stat-label">fizeram</p></div>
+    <div class="stat"><p class="stat-value">{{ d.resumo.ausente }}</p><p class="stat-label">ausentes</p></div>
+    <div class="stat"><p class="stat-value">{{ d.linhas|length }}</p><p class="stat-label">linhas</p></div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th><th>Série</th>
+          {% for m in d.materias %}<th>{{ m.value[:3] }}</th>{% endfor %}
+          <th>Média</th><th>Geral</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ln in d.linhas %}
+        <tr>
+          <td>{{ ln.nome }}</td>
+          <td class="td-status">{{ ln.serie or "—" }}</td>
+          {% for m in d.materias %}
+          <td>{% if ln.status == "ausente" %}—{% else %}{{ ln.acertos.get(m.name, "—") }}{% endif %}</td>
+          {% endfor %}
+          <td>{% if ln.media_oficial is not none %}{{ "%.2f"|format(ln.media_oficial) }}{% else %}—{% endif %}</td>
+          <td>{% if ln.geral_oficial is not none %}{{ "%g"|format(ln.geral_oficial) }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ form.payload(class="visually-hidden", tabindex="-1", **{"aria-hidden": "true"}) }}
+    {{ form.data(class="visually-hidden", tabindex="-1", **{"aria-hidden": "true"}) }}
+    <input type="hidden" name="acao" value="confirmar">
+    <button type="submit" class="btn btn-primary btn-block">
+      {% if preview.substitui_turma %}Substituir a turma {{ d.turma }}{% else %}Confirmar importação{% endif %}
+    </button>
+  </form>
+  <a class="btn btn-ghost btn-block" href="{{ url_for('simulados.turma_importar') }}">Cancelar e recomeçar</a>
+</section>
+
+{% else %}
+
+<section class="card">
+  <h2 class="card-title">1. Gere o JSON</h2>
+  <p class="card-sub">
+    Mande o print/PDF do ranking para o Claude junto com este prompt — um por turma.
+    O total de questões o app já sabe (ITA 12 por matéria, IME 15/15/10).
+  </p>
+  <details class="prompt-box">
+    <summary>Ver o prompt de extração</summary>
+    <pre id="prompt-texto" class="prompt-pre">{{ prompt_extracao }}</pre>
+    <button type="button" class="btn btn-outline btn-sm" id="copiar-prompt">Copiar prompt</button>
+  </details>
+</section>
+
+<section class="card">
+  <h2 class="card-title">2. Cole aqui</h2>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      {{ form.data.label(class="form-label") }}
+      {{ form.data(class="input" + (" input-error" if form.data.errors else "")) }}
+      <p class="card-sub">
+        Muitas planilhas não trazem data no título; nesse caso o JSON vem com
+        <code>"data": null</code> e a data da prova é esta aqui.
+      </p>
+      {% for e in form.data.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+    </div>
+    <div class="form-group">
+      {{ form.payload(class="input input-mono" + (" input-error" if form.payload.errors else ""),
+                      rows="14", spellcheck="false",
+                      placeholder='{ "tipo": "simulado", "banca": "ITA", "rotulo": "S3", ... }') }}
+      {% for e in form.payload.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+    </div>
+    <input type="hidden" name="acao" value="validar">
+    <button type="submit" class="btn btn-primary btn-block">Validar e pré-visualizar</button>
+  </form>
+  <p class="card-sub">
+    Nada é gravado antes de você conferir. Reimportar a mesma prova + turma substitui o anterior.
+  </p>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/oficiais.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Concursos — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Concursos</h1>
+  {% if current_user.is_admin %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('concursos.novo') }}">+ Novo</a>
+  {% endif %}
+</div>
+
+{% if not total %}
+<section class="card empty-state">
+  <h2>Nenhum concurso cadastrado</h2>
+  {% if current_user.is_admin %}
+  <p>Cadastre o primeiro concurso para o grupo começar a registrar simulados.</p>
+  <a class="btn btn-primary" href="{{ url_for('concursos.novo') }}">Criar concurso</a>
+  {% else %}
+  <p>Peça ao admin do grupo para cadastrar os concursos (ex.: ITA 2027, IME 2027).</p>
+  {% endif %}
+</section>
+{% else %}
+
+{% for grupo, itens in grupos %}
+<section class="concurso-grupo">
+  <h2 class="grupo-head">{{ grupo }} <span class="grupo-count">{{ itens|length }}</span></h2>
+  <ul class="cards-list">
+    {% for c in itens %}
+    {% set dias = (c.data_prova - hoje).days %}
+    {% set curto = c.nome | rotulo_curto %}
+    <li class="card concurso-card">
+      <div class="concurso-top">
+        <div>
+          <p class="concurso-nome">{{ curto if curto != c.nome else c.nome }}</p>
+          <p class="concurso-data">
+            {% if c.data_fim and c.data_fim > c.data_prova %}
+            {{ c.data_prova.strftime("%d/%m") }} a {{ c.data_fim.strftime("%d/%m/%Y") }}
+            {% else %}
+            Prova em {{ c.data_prova.strftime("%d/%m/%Y") }}
+            {% endif %}
+          </p>
+        </div>
+        {% if dias >= 0 %}
+        <span class="dias-chip">{{ dias }} dias</span>
+        {% else %}
+        <span class="dias-chip dias-passado">encerrado</span>
+        {% endif %}
+      </div>
+      <div class="concurso-foot">
+        <span class="concurso-meta">{{ meus_totais.get(c.id, 0) }} simulado(s) seu(s)</span>
+        <span class="concurso-actions">
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('simulados.novo', concurso=c.id) }}">Registrar simulado</a>
+          {% if current_user.is_admin %}
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('concursos.editar', concurso_id=c.id) }}">Editar</a>
+          <form class="inline-form" method="post" action="{{ url_for('concursos.deletar', concurso_id=c.id) }}"
+                data-confirm="Excluir o concurso {{ c.nome }}?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-ghost btn-sm btn-ghost-danger">Excluir</button>
+          </form>
+          {% endif %}
+        </span>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endfor %}
+{% endif %}
+{% endblock %}

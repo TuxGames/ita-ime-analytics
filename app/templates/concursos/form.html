@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}{{ titulo }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ titulo }}</h1>
+</div>
+
+<div class="card">
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    {{ field(form.banca, placeholder="ex.: ITA 2027", list="bancas-existentes", autocomplete="off") }}
+    <datalist id="bancas-existentes">
+      {% for b in bancas %}<option value="{{ b }}"></option>{% endfor %}
+    </datalist>
+    {{ field(form.etapa, placeholder="ex.: 2ª Fase (deixe vazio se for dia único)") }}
+    {{ field(form.data_prova) }}
+    {{ field(form.data_fim) }}
+
+    <fieldset class="form-group check-group">
+      <legend class="form-label">{{ form.materias.label.text }}</legend>
+      <p class="card-sub">Marque as matérias que caem neste dia de prova.</p>
+      {{ form.materias(class="check-list") }}
+      {% for e in form.materias.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+
+      <details class="extras" {% if form.materias_extras.data %}open{% endif %}>
+        <summary>Matérias específicas (Geografia, História)</summary>
+        <p class="card-sub">Só para concursos que cobram essas matérias (ex.: EN).</p>
+        {{ form.materias_extras(class="check-list") }}
+      </details>
+    </fieldset>
+
+    <button type="submit" class="btn btn-primary btn-block">Salvar</button>
+  </form>
+</div>
+{% endblock %}

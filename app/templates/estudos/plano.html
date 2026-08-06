@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Plano de estudos — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Plano da semana</h1>
+</div>
+
+<p class="page-intro">Marque as matérias que você pretende estudar em cada dia. Pode mudar quando quiser.</p>
+
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {% for weekday, campo in form.dia_fields() %}
+  <div class="card form-card">
+    <h2 class="card-title">{{ dias_semana[weekday] }}</h2>
+    {{ campo(class="check-list") }}
+  </div>
+  {% endfor %}
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary btn-block">Salvar plano</button>
+    <a class="btn btn-ghost btn-block" href="{{ url_for('estudos.index') }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

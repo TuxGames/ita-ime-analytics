@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Simulado {{ simulado.data_simulado.strftime("%d/%m/%Y") }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{% if simulado.rotulo %}{{ simulado.rotulo }} · {% endif %}{{ simulado.data_simulado.strftime("%d/%m/%Y") }}</h1>
+    <p class="page-sub">{{ simulado.concurso.nome }}</p>
+    {% if simulado.veio_de_import %}
+    <p class="page-sub origem-import">Números vindos do ranking da turma</p>
+    {% endif %}
+  </div>
+</div>
+
+<section class="card detail-nota-card">
+  <div class="detail-nota">
+    <p class="detail-nota-value">{{ "%.1f"|format(simulado.nota_geral) }}</p>
+    <p class="detail-nota-label">nota geral</p>
+  </div>
+  {% if simulado.posicao_estimada %}
+  <div class="detail-nota">
+    <p class="detail-nota-value">#{{ simulado.posicao_estimada }}</p>
+    <p class="detail-nota-label">posição estimada</p>
+  </div>
+  {% endif %}
+</section>
+
+{% if simulado.materias %}
+<section class="card">
+  <h2 class="card-title">Por matéria</h2>
+  <ul class="materia-list">
+    {% for m in simulado.materias %}
+    <li class="materia-item">
+      <div class="materia-row">
+        <span class="materia-nome">{{ m.materia.value }}</span>
+        <span class="materia-score">{{ m.acertos }}/{{ m.total_questoes }} <strong>({{ m.percentual }}%)</strong></span>
+      </div>
+      <div class="bar-track" aria-hidden="true">
+        <div class="bar-fill bar-{{ ((m.percentual / 5)|round|int) * 5 }}"></div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if simulado.observacao %}
+<section class="card">
+  <h2 class="card-title">Observações</h2>
+  <p class="obs-text">{{ simulado.observacao }}</p>
+</section>
+{% endif %}
+
+<div class="form-actions">
+  <a class="btn btn-primary btn-block" href="{{ url_for('simulados.editar', simulado_id=simulado.id) }}">Editar</a>
+  <form method="post" action="{{ url_for('simulados.deletar', simulado_id=simulado.id) }}"
+        data-confirm="Excluir este simulado? Essa ação não tem volta.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger btn-block">Excluir</button>
+  </form>
+  <a class="btn btn-ghost btn-block" href="{{ url_for('simulados.listar') }}">Voltar</a>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Calma lá — ITA-IME Analytics{% endblock %}
+{% block content %}
+<section class="card empty-state">
+  <h1 class="error-code">429</h1>
+  <h2>Muitas tentativas</h2>
+  <p>{{ description or "Você fez muitas requisições em pouco tempo. Aguarde um pouco e tente de novo." }}</p>
+</section>
+{% endblock %}

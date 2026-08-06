@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Juntar alunos — ITA-IME Analytics{% endblock %}
+
+{% macro form_merge(a, b, rotulo) %}
+<form method="post" class="merge-form"
+      data-confirm="Juntar “{{ b.nome }}” em “{{ a.nome }}”? As linhas dos dois ficam com {{ a.nome }}.">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="sobrevivente" value="{{ a.id }}">
+  <input type="hidden" name="absorvido" value="{{ b.id }}">
+  <button type="submit" class="btn btn-outline btn-sm">{{ rotulo }}</button>
+</form>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Juntar alunos</h1>
+    <p class="page-sub">A mesma pessoa escrita de dois jeitos</p>
+  </div>
+</div>
+
+<section class="card info-card">
+  <p>
+    Nenhuma linha de simulado é apagada num merge: elas passam a apontar para o aluno
+    que ficar, e a grafia do outro vira <strong>apelido</strong> — assim um import futuro
+    com aquele nome cai na pessoa certa em vez de criar outra duplicata.
+  </p>
+</section>
+
+{% if not pares %}
+<section class="card empty-state">
+  <h2>Nenhum nome parecido</h2>
+  <p>Ninguém aqui parece ser a mesma pessoa escrita de dois jeitos.</p>
+</section>
+{% else %}
+<section class="card">
+  <h2 class="card-title">Parecidos ({{ pares|length }})</h2>
+  <p class="card-sub">
+    A sugestão é conservadora — nome cortado na célula ou sobrenome do meio abreviado.
+    Confira antes: nomes parecidos podem ser pessoas diferentes de verdade.
+  </p>
+  <ul class="of-linhas">
+    {% for par in pares %}
+    <li class="of-linha">
+      <p class="merge-motivo">{{ par.motivo }}</p>
+      <div class="merge-par">
+        <div class="merge-lado">
+          <a href="{{ url_for('admin.aluno_detalhe', aluno_id=par.a.id) }}">{{ par.a.nome }}</a>
+          <small>{{ par.linhas_a }} linha(s){% if par.a.user_id %} · tem conta{% endif %}</small>
+          {{ form_merge(par.a, par.b, "Ficar com este") }}
+        </div>
+        <div class="merge-lado">
+          <a href="{{ url_for('admin.aluno_detalhe', aluno_id=par.b.id) }}">{{ par.b.nome }}</a>
+          <small>{{ par.linhas_b }} linha(s){% if par.b.user_id %} · tem conta{% endif %}</small>
+          {{ form_merge(par.b, par.a, "Ficar com este") }}
+        </div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2 class="card-title">Juntar manualmente</h2>
+  <p class="card-sub">Para os casos que a sugestão não pega. O segundo vira apelido do primeiro.</p>
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label class="form-label" for="sobrevivente">Aluno que fica</label>
+      <select class="input" id="sobrevivente" name="sobrevivente" required>
+        {% for a in todos %}<option value="{{ a.id }}">{{ a.nome }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="absorvido">Aluno que vira apelido</label>
+      <select class="input" id="absorvido" name="absorvido" required>
+        {% for a in todos %}<option value="{{ a.id }}">{{ a.nome }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Juntar</button>
+  </form>
+</section>
+
+<div class="form-actions">
+  <a class="btn btn-ghost btn-block" href="{{ url_for('admin.turmas') }}">Voltar às turmas</a>
+</div>
+{% endblock %}

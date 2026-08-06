@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field %}
+{% block title %}Entrar — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-hero">
+    <p class="auth-logo">ITA·IME</p>
+    <p class="auth-sub">Analytics de simulados</p>
+  </div>
+  <div class="card auth-card">
+    <h1 class="card-title">Entrar</h1>
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      {{ field(form.username, autocomplete="username", autocapitalize="none", spellcheck="false") }}
+      {{ field(form.password, autocomplete="current-password") }}
+      <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+    </form>
+    <p class="auth-note">Ainda não tem conta? <a href="{{ url_for('auth.register') }}">Criar conta</a></p>
+  </div>
+</div>
+{% endblock %}

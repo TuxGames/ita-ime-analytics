@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Treino de questões — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Treino de questões</h1>
+</div>
+
+<section class="card">
+  {# ---- Definir tempo padrão (primeira vez ou ao mudar) ---- #}
+  <div id="treino-setup" hidden>
+    <h2 class="card-title">Tempo por questão</h2>
+    <p class="card-sub">Quanto tempo, em média, você quer ter por questão. Fica salvo neste aparelho e vale para todas as sessões.</p>
+    <div class="tempo-inputs">
+      <label>Min<input id="setup-min" class="input" type="number" inputmode="numeric" min="0" max="120" value="5"></label>
+      <span class="tempo-sep">:</span>
+      <label>Seg<input id="setup-seg" class="input" type="number" inputmode="numeric" min="0" max="59" value="0"></label>
+    </div>
+    <button id="setup-salvar" class="btn btn-primary btn-block" type="button">Salvar tempo padrão</button>
+  </div>
+
+  {# ---- Painel principal do cronômetro ---- #}
+  <div id="treino-main" hidden>
+    <p class="treino-padrao">
+      Tempo padrão: <strong id="padrao-label">05:00</strong>
+      <button id="mudar-padrao" class="linklike" type="button">mudar</button>
+    </p>
+
+    <div class="treino-display">
+      <p class="treino-remaining" id="remaining">05:00</p>
+      <p class="treino-info" id="questao-info">Pronto para começar</p>
+    </div>
+
+    <div class="treino-stats">
+      <div><span id="feitas">0</span><small>feitas</small></div>
+      <div><span id="tempo-total">00:00</span><small>tempo total</small></div>
+      <div><span id="budget-atual">05:00</span><small>desta questão</small></div>
+    </div>
+
+    <div class="treino-controls">
+      <button id="btn-iniciar" class="btn btn-primary btn-block" type="button">Iniciar sessão</button>
+      <button id="btn-registrar" class="btn btn-primary btn-block treino-registrar" type="button" hidden>
+        Registrar questão
+      </button>
+      <div class="treino-row" id="row-secundario" hidden>
+        <button id="btn-pausar" class="btn btn-outline" type="button">Pausar</button>
+        <button id="btn-finalizar" class="btn btn-danger" type="button">Finalizar</button>
+      </div>
+    </div>
+
+    <button id="btn-mute" class="linklike treino-mute" type="button" aria-pressed="false">🔊 Som ligado</button>
+  </div>
+
+  {# ---- Resumo ao finalizar ---- #}
+  <div id="treino-resumo" hidden>
+    <h2 class="card-title">Sessão finalizada</h2>
+    <div class="treino-stats">
+      <div><span id="res-feitas">0</span><small>questões</small></div>
+      <div><span id="res-total">00:00</span><small>tempo total</small></div>
+      <div><span id="res-media">00:00</span><small>média/questão</small></div>
+    </div>
+
+    <form id="treino-salvar-form" method="post" action="{{ url_for('estudos.treino_salvar') }}" class="treino-salvar">
+      {{ form.hidden_tag() }}
+      {{ form.questoes(id="save-questoes", type="hidden") }}
+      {{ form.tempo_total_seg(id="save-total", type="hidden") }}
+      {{ form.tempo_padrao_seg(id="save-padrao", type="hidden") }}
+      <p class="card-sub">Quer guardar esta sessão? Matéria e observações são opcionais.</p>
+      <div class="field">
+        {{ form.materia.label }}
+        {{ form.materia(class="input") }}
+      </div>
+      <div class="field">
+        {{ form.observacao.label }}
+        {{ form.observacao(class="input", rows="2", placeholder="Ex.: perdi tempo fazendo conta na mão") }}
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Salvar sessão</button>
+    </form>
+
+    <button id="btn-nova" class="btn btn-ghost btn-block" type="button">Nova sessão sem salvar</button>
+  </div>
+</section>
+
+{% if sessoes %}
+<section class="card">
+  <h2 class="card-title">Sessões salvas</h2>
+  <ul class="treino-hist">
+    {% for s in sessoes %}
+    <li class="treino-hist-item">
+      <div class="treino-hist-main">
+        <p class="treino-hist-top">
+          <span class="treino-hist-data">{{ s.data.strftime("%d/%m/%Y") }}</span>
+          {% if s.materia %}<span class="chip">{{ s.materia.value }}</span>{% endif %}
+        </p>
+        <p class="treino-hist-nums">
+          <strong>{{ s.questoes }}</strong> questões ·
+          {{ "%d:%02d"|format(s.tempo_total_seg // 60, s.tempo_total_seg % 60) }} total ·
+          {{ "%d:%02d"|format((s.tempo_medio_seg|int) // 60, (s.tempo_medio_seg|int) % 60) }}/questão
+        </p>
+        {% if s.observacao %}<p class="treino-hist-obs">{{ s.observacao }}</p>{% endif %}
+      </div>
+      <form method="post" action="{{ url_for('estudos.treino_excluir', sessao_id=s.id) }}"
+            onsubmit="return confirm('Excluir esta sessão?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn-icon-del" aria-label="Excluir sessão">×</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="card info-card">
+  <p><strong>Como funciona:</strong> o tempo que sobrar numa questão entra na próxima; se você passar do tempo, o excedente é descontado da próxima. Um som avisa quando acaba o tempo e quando você registra dentro do prazo.</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/treino.js') }}" defer></script>
+{% endblock %}

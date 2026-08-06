@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Sem permissão — ITA-IME Analytics{% endblock %}
+{% block content %}
+<section class="card empty-state">
+  <h1 class="error-code">403</h1>
+  <h2>Sem permissão</h2>
+  <p>Essa ação é restrita ao administrador do grupo.</p>
+  <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">Ir para o Dashboard</a>
+</section>
+{% endblock %}

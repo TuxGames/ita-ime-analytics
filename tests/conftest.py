@@ -1,0 +1,188 @@
+"""Fixtures da suíte.
+
+O app roda em SQLite na memória, com CSRF, rate limit e proteção de sessão
+desligados: são comportamentos reais (e testados à parte, no HTTP), mas aqui só
+atrapalhariam a checagem da lógica de import e ranking.
+"""
+
+import os
+import sys
+from datetime import date
+
+import pytest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app import create_app  # noqa: E402
+from app.extensions import db as _db  # noqa: E402
+from app.extensions import login_manager  # noqa: E402
+from app.models import User  # noqa: E402
+from config import Config  # noqa: E402
+
+
+class ConfigTeste(Config):
+    SECRET_KEY = "chave-fixa-de-teste-nao-usar-em-producao"
+    SQLALCHEMY_DATABASE_URI = "sqlite://"  # em memória
+    WTF_CSRF_ENABLED = False
+    RATELIMIT_ENABLED = False
+    SESSION_COOKIE_SECURE = False
+    TESTING = True
+    # bcrypt no custo de produção (13) deixaria a suíte lenta demais.
+    BCRYPT_LOG_ROUNDS = 4
+
+
+@pytest.fixture
+def app():
+    aplicativo = create_app(ConfigTeste)
+    # "strong" invalida a sessão forjada pelo test_client.
+    login_manager.session_protection = None
+    with aplicativo.app_context():
+        _db.create_all()
+        yield aplicativo
+        _db.session.remove()
+        _db.drop_all()
+
+
+@pytest.fixture
+def db(app):
+    return _db
+
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
+
+
+def _criar_usuario(nome, admin=False, nome_oficial=None):
+    usuario = User(
+        username=nome,
+        is_admin=admin,
+        nome_oficial=nome_oficial,
+        # Sem isso o app manda todo mundo para /trocar-senha antes de qualquer
+        # rota, e os testes de rota nunca chegam no que querem checar.
+        must_change_password=False,
+    )
+    usuario.set_password("senha-de-teste-123")
+    _db.session.add(usuario)
+    _db.session.commit()
+    return usuario
+
+
+@pytest.fixture
+def admin(db):
+    return _criar_usuario("admin", admin=True)
+
+
+@pytest.fixture
+def usuario(db):
+    return _criar_usuario("alice")
+
+
+@pytest.fixture
+def criar_usuario(db):
+    """Para quando o teste precisa de mais gente do que as fixtures acima."""
+    return _criar_usuario
+
+
+@pytest.fixture
+def logar(client):
+    """Autentica o test_client como o usuário dado, sem passar pelo /login."""
+
+    def _logar(usuario):
+        with client.session_transaction() as sessao:
+            sessao["_user_id"] = str(usuario.id)
+            sessao["_fresh"] = True
+
+    return _logar
+
+
+# ---------------------------------------------------------------------------
+# Fábricas de payload — os testes montam JSON válido sem repetir boilerplate.
+# ---------------------------------------------------------------------------
+
+
+def payload_oficial(turma="novata", concurso="AFA 2027", **ajustes):
+    dados = {
+        "tipo": "oficial",
+        "concurso": concurso,
+        "turma": turma,
+        "fonte": "GGE",
+        "data": None,
+        "escala": 10,
+        "materias": ["MAT", "FIS"],
+        "metrica": "MP",
+        "resultados": [
+            {
+                "nome": f"PESSOA {turma.upper()} UM",
+                "status": "classificado",
+                "classificacao": 100 if turma == "novata" else 200,
+                "metrica": 7.0,
+                "notas": {"MAT": 7.0, "FIS": 7.0},
+            },
+            {
+                "nome": f"PESSOA {turma.upper()} DOIS",
+                "status": "sem_aproveitamento",
+                "classificacao": None,
+                "metrica": 4.0,
+                "notas": {"MAT": 4.0, "FIS": 4.0},
+            },
+            {"nome": f"PESSOA {turma.upper()} TRES", "status": "nao_encontrado"},
+        ],
+    }
+    dados.update(ajustes)
+    return dados
+
+
+def payload_simulado(turma="novata", rotulo="S3", banca="ITA", **ajustes):
+    dados = {
+        "tipo": "simulado",
+        "fase": "objetiva",
+        "banca": banca,
+        "rotulo": rotulo,
+        "data": "2026-04-11",
+        "turma": turma,
+        "fonte": "GGE",
+        "materias": ["MAT", "FIS", "QUIM", "ING"],
+        "materias_media": ["MAT", "FIS", "QUIM"],
+        "questoes": None,
+        "resultados": [
+            {
+                "nome": f"ALUNO {turma.upper()} UM",
+                "serie": "3º ANO",
+                "status": "presente",
+                "acertos": {"MAT": 9, "FIS": 5, "QUIM": 5, "ING": 11},
+                "media_oficial": 5.28,
+                "geral_oficial": 30,
+            },
+            {
+                "nome": f"ALUNO {turma.upper()} DOIS",
+                "serie": "2º ANO",
+                "status": "presente",
+                "acertos": {"MAT": 6, "FIS": 6, "QUIM": 6, "ING": 6},
+                "media_oficial": 5.00,
+                "geral_oficial": 24,
+            },
+            {
+                "nome": f"ALUNO {turma.upper()} TRES",
+                "serie": "CURSO",
+                "status": "ausente",
+            },
+        ],
+    }
+    dados.update(ajustes)
+    return dados
+
+
+@pytest.fixture
+def oficial():
+    return payload_oficial
+
+
+@pytest.fixture
+def simulado():
+    return payload_simulado
+
+
+@pytest.fixture
+def hoje():
+    return date.today()

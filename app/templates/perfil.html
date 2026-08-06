@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Perfil — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Perfil</h1>
+</div>
+
+<section class="card perfil-card">
+  <div class="avatar" aria-hidden="true">{{ current_user.username[0]|upper }}</div>
+  <div>
+    <p class="perfil-nome">{{ current_user.username }}
+      {% if current_user.is_admin %}<span class="badge-admin">admin</span>{% endif %}
+    </p>
+    <p class="perfil-meta">No grupo desde {{ current_user.created_at.strftime("%d/%m/%Y") }}</p>
+    <p class="perfil-meta">{{ total_simulados }} simulado(s) registrado(s)</p>
+    {% if total_oficiais %}
+    <p class="perfil-meta">{{ total_oficiais }} resultado(s) oficial(is) vinculado(s)</p>
+    {% endif %}
+    {% if total_rankings %}
+    <p class="perfil-meta">{{ total_rankings }} ranking(s) de simulado vinculado(s)</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">Seu nome nas listas</h2>
+  <p class="card-sub">
+    Os rankings de simulado e os listões de concurso são importados com o nome completo
+    que aparece na lista. Diga aqui como o seu nome vem escrito e o app liga esses
+    resultados ao seu perfil automaticamente. Deixe vazio para não vincular nada.
+  </p>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      {{ form.nome_oficial(class="input" + (" input-error" if form.nome_oficial.errors else ""),
+                           placeholder="Ex.: ARTHUR TELES VILA NOVA",
+                           autocomplete="name") }}
+      {% for e in form.nome_oficial.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Salvar nome</button>
+  </form>
+</section>
+
+<div class="form-actions">
+  {% if current_user.is_admin %}
+  <a class="btn btn-outline btn-block" href="{{ url_for('admin.turmas') }}">Turmas e alunos (admin)</a>
+  {% endif %}
+  <a class="btn btn-outline btn-block" href="{{ url_for('auth.change_password') }}">Trocar senha</a>
+  <form method="post" action="{{ url_for('auth.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger btn-block">Sair da conta</button>
+  </form>
+</div>
+{% endblock %}

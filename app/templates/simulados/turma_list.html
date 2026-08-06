@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Ranking da turma — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Ranking da turma</h1>
+    <p class="page-sub">O mesmo simulado, com todo mundo que fez</p>
+  </div>
+  {% if current_user.is_admin %}
+  <a class="btn btn-primary btn-sm show-desktop" href="{{ url_for('simulados.turma_importar') }}">+ Importar</a>
+  {% endif %}
+</div>
+
+{% if not turmas %}
+<section class="card empty-state">
+  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+  <h2>Nenhum ranking importado</h2>
+  <p>Aqui entra o ranking que o colégio divulga de cada simulado, com a turma inteira.</p>
+  {% if current_user.is_admin %}
+  <a class="btn btn-primary" href="{{ url_for('simulados.turma_importar') }}">Importar o primeiro</a>
+  {% endif %}
+</section>
+{% else %}
+
+{% if not tem_vinculo and sem_nome %}
+<section class="card info-card">
+  <p><strong>Diga qual é o seu nome nos rankings</strong> — no
+    <a href="{{ url_for('main.perfil') }}">seu perfil</a> ou clicando em “sou eu” dentro de um
+    ranking. Aí a sua linha fica destacada e dá para trazer as notas para os seus simulados.</p>
+</section>
+{% endif %}
+
+<ul class="cards-list">
+  {% for t in turmas %}
+  <li>
+    <a class="card of-card" href="{{ url_for('simulados.turma_detalhe', turma_id=t.id) }}">
+      <div class="of-card-top">
+        <div>
+          <p class="of-conc">{{ t.banca }} {{ t.rotulo }}</p>
+          <p class="of-turma">
+            {% for turma in t.turmas_presentes %}
+            {{ t.total_de(turma) }} {{ TURMA_CURTO[turma]|lower }}{% if not loop.last %} · {% endif %}
+            {% endfor %}
+            · {{ t.data.strftime("%d/%m/%Y") }}{% if t.fonte %} · {{ t.fonte }}{% endif %}
+          </p>
+        </div>
+        <div class="of-card-num">
+          <p class="of-num-value">{{ t.presentes()|length }}</p>
+          <p class="of-num-label">fizeram</p>
+        </div>
+      </div>
+      <div class="chips">
+        {% for m in t.materias %}
+        <span class="chip">{{ m.value[:3] }} {{ t.questoes.get(m.name, "?") }}q</span>
+        {% endfor %}
+        {% if t.ausentes() %}<span class="chip">{{ t.ausentes()|length }} ausente(s)</span>{% endif %}
+      </div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<div class="form-actions">
+  <a class="btn btn-ghost btn-block" href="{{ url_for('simulados.listar') }}">Voltar aos meus simulados</a>
+</div>
+
+{% if current_user.is_admin %}
+<a class="fab hide-desktop" href="{{ url_for('simulados.turma_importar') }}" aria-label="Importar ranking">
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+</a>
+{% endif %}
+{% endblock %}

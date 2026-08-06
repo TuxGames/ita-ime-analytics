@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Simulados — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Meus simulados</h1>
+  <a class="btn btn-primary btn-sm show-desktop" href="{{ url_for('simulados.novo') }}">+ Novo simulado</a>
+</div>
+
+<a class="card treino-link" href="{{ url_for('simulados.turma_listar') }}">
+  <div class="treino-link-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+  </div>
+  <div class="treino-link-text">
+    <p class="treino-link-title">Ranking da turma</p>
+    <p class="treino-link-sub">Sua posição no mesmo simulado, com as matérias que você escolher</p>
+  </div>
+  <span class="treino-link-arrow" aria-hidden="true">›</span>
+</a>
+
+{% if not simulados %}
+<section class="card empty-state">
+  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+  <h2>Nenhum simulado registrado</h2>
+  <p>Depois de fazer um simulado, registre a nota aqui para acompanhar sua evolução.</p>
+  <a class="btn btn-primary" href="{{ url_for('simulados.novo') }}">Registrar primeiro simulado</a>
+</section>
+{% else %}
+
+{# Mobile: cards #}
+<ul class="cards-list hide-desktop">
+  {% for s in simulados %}
+  <li>
+    <a class="card sim-card" href="{{ url_for('simulados.detalhe', simulado_id=s.id) }}">
+      <div class="sim-card-top">
+        <div>
+          <p class="sim-date">
+            {% if s.rotulo %}<span class="badge-rotulo">{{ s.rotulo }}</span>{% endif %}
+            {{ s.data_simulado.strftime("%d/%m/%Y") }}
+          </p>
+          <p class="sim-concurso">{{ s.concurso.nome }}</p>
+        </div>
+        <div class="sim-nota">
+          <p class="sim-nota-value">{{ "%.1f"|format(s.nota_geral) }}</p>
+          {% if s.posicao_estimada %}<p class="sim-pos">#{{ s.posicao_estimada }}</p>{% endif %}
+        </div>
+      </div>
+      {% if s.materias %}
+      <div class="chips">
+        {% for m in s.materias %}
+        <span class="chip">{{ m.materia.value[:3] }} {{ m.acertos }}/{{ m.total_questoes }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+{# Desktop: tabela #}
+<div class="card table-wrap show-desktop">
+  <table class="table">
+    <thead>
+      <tr><th>Prova</th><th>Data</th><th>Concurso</th><th>Nota</th><th>Posição</th><th>Matérias</th><th class="th-acoes">Ações</th></tr>
+    </thead>
+    <tbody>
+      {% for s in simulados %}
+      <tr>
+        <td>{% if s.rotulo %}<span class="badge-rotulo">{{ s.rotulo }}</span>{% else %}—{% endif %}</td>
+        <td>{{ s.data_simulado.strftime("%d/%m/%Y") }}</td>
+        <td>{{ s.concurso.nome }}</td>
+        <td class="td-nota">{{ "%.1f"|format(s.nota_geral) }}</td>
+        <td>{% if s.posicao_estimada %}#{{ s.posicao_estimada }}{% else %}—{% endif %}</td>
+        <td>
+          <div class="chips">
+            {% for m in s.materias %}
+            <span class="chip">{{ m.materia.value[:3] }} {{ m.acertos }}/{{ m.total_questoes }}</span>
+            {% endfor %}
+          </div>
+        </td>
+        <td class="td-acoes">
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('simulados.detalhe', simulado_id=s.id) }}">Ver</a>
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('simulados.editar', simulado_id=s.id) }}">Editar</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<a class="fab hide-desktop" href="{{ url_for('simulados.novo') }}" aria-label="Registrar novo simulado">
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+</a>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}{{ r.concurso_nome }} — ITA-IME Analytics{% endblock %}
+
+{# Todos os recortes abaixo passam o filtro ativo, para os números da tela
+   sempre falarem da mesma coisa que a lista mostrada. #}
+{% set classificados = r.classificados(turma) %}
+{% set sem_aprov = r.sem_aproveitamento(turma) %}
+{% set nao_encontrados = r.nao_encontrados(turma) %}
+
+{% macro nota_chips(ln) %}
+<div class="chips">
+  {% for m in materias %}
+  {% set nota = ln.nota_de(m) %}
+  {% if nota is not none %}<span class="chip">{{ m.value[:3] }} {{ "%.2f"|format(nota) }}</span>{% endif %}
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro marca_turma(ln) %}
+{# Sem filtro, a turma de cada pessoa precisa aparecer na linha. #}
+{% if not turma %} <span class="serie-chip">{{ ln.turma_curto }}</span>{% endif %}
+{% endmacro %}
+
+{% macro sou_eu(ln) %}
+{% if ln.user_id is none %}
+<form method="post" action="{{ url_for('oficiais.reivindicar', linha_id=ln.id) }}"
+      data-confirm="Vincular “{{ ln.nome }}” à sua conta?">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="linklike">sou eu</button>
+</form>
+{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ r.concurso_nome }}</h1>
+    <p class="page-sub">
+      Classificação nacional
+      {%- if r.fonte %} · {{ r.fonte }}{% endif %}
+      {%- if r.data %} · {{ r.data.strftime("%d/%m/%Y") }}{% endif %}
+    </p>
+  </div>
+</div>
+
+{% if turmas|length > 1 %}
+<nav class="filtro-turma" aria-label="Filtrar por turma">
+  <a class="filtro-chip {{ 'filtro-ativo' if not turma else '' }}"
+     href="{{ url_for('oficiais.detalhe', resultado_id=r.id) }}"
+     {% if not turma %}aria-current="true"{% endif %}>Todos</a>
+  {% for t in turmas %}
+  <a class="filtro-chip {{ 'filtro-ativo' if turma == t else '' }}"
+     href="{{ url_for('oficiais.detalhe', resultado_id=r.id, turma=t) }}"
+     {% if turma == t %}aria-current="true"{% endif %}>{{ TURMA_CURTO[t] }}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+<section class="card">
+  <div class="stats-grid stats-3">
+    <div class="stat">
+      <p class="stat-value">{{ classificados|length }}</p>
+      <p class="stat-label">classificados</p>
+    </div>
+    <div class="stat">
+      <p class="stat-value">{% if r.melhor_classificacao(turma) %}#{{ r.melhor_classificacao(turma) }}{% else %}—{% endif %}</p>
+      <p class="stat-label">melhor posição</p>
+    </div>
+    <div class="stat">
+      <p class="stat-value">{{ (classificados|length) + (sem_aprov|length) + (nao_encontrados|length) }}</p>
+      <p class="stat-label">do colégio</p>
+    </div>
+  </div>
+</section>
+
+{% if classificados %}
+<section class="card">
+  <h2 class="card-title">Classificados</h2>
+  <p class="card-sub">
+    <strong>#</strong> é a posição na classificação provisória do concurso (nacional){% if r.metrica %},
+    ordenada por {{ r.metrica }}{% endif %}. O número à esquerda é a colocação
+    {% if turma %}entre os {{ TURMA_CURTO[turma]|lower }}{% else %}entre o pessoal do colégio{% endif %},
+    e acompanha o filtro acima.
+  </p>
+
+  {# Mobile: cards #}
+  <ul class="of-linhas hide-desktop">
+    {% for ln in classificados %}
+    <li class="of-linha {{ 'of-linha-eu' if ln.user_id == current_user.id else '' }}">
+      <div class="of-linha-head">
+        {# A lista já vem ordenada pela classificação nacional, então o índice do
+           laço é a colocação dentro do recorte mostrado. #}
+        <span class="pos-colegio">{{ loop.index }}º</span>
+        <span class="of-linha-pos">#{{ ln.classificacao }}</span>
+        <span class="of-linha-nome">{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span>
+        {% if ln.metrica_valor is not none %}<span class="of-linha-mp">{{ "%.4f"|format(ln.metrica_valor) }}</span>{% endif %}
+      </div>
+      {{ nota_chips(ln) }}
+      {{ sou_eu(ln) }}
+    </li>
+    {% endfor %}
+  </ul>
+
+  {# Desktop: tabela #}
+  <div class="table-wrap show-desktop">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>{% if turma %}Entre {{ TURMA_CURTO[turma]|lower }}{% else %}No colégio{% endif %}</th>
+          <th>Nacional</th><th>Nome</th>
+          {% if not turma %}<th>Turma</th>{% endif %}
+          {% if r.metrica %}<th>{{ r.metrica }}</th>{% endif %}
+          {% for m in materias %}<th>{{ m.value[:3] }}</th>{% endfor %}
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ln in classificados %}
+        <tr class="{{ 'of-linha-eu' if ln.user_id == current_user.id else '' }}">
+          <td class="td-pos-colegio">{{ loop.index }}º</td>
+          <td class="td-nota">#{{ ln.classificacao }}</td>
+          <td>{{ ln.nome }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</td>
+          {% if not turma %}<td class="td-status">{{ ln.turma_curto }}</td>{% endif %}
+          {% if r.metrica %}<td>{% if ln.metrica_valor is not none %}{{ "%.4f"|format(ln.metrica_valor) }}{% else %}—{% endif %}</td>{% endif %}
+          {% for m in materias %}
+          {% set nota = ln.nota_de(m) %}
+          <td>{% if nota is not none %}{{ "%.2f"|format(nota) }}{% else %}—{% endif %}</td>
+          {% endfor %}
+          <td class="td-acoes">{{ sou_eu(ln) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if sem_aprov %}
+<section class="card">
+  <h2 class="card-title">Fez, mas sem aproveitamento</h2>
+  <p class="card-sub">Não atingiram o mínimo, então o concurso não atribui posição oficial. Ordenado pela média das notas.</p>
+  <ul class="of-linhas">
+    {% for ln in sem_aprov %}
+    <li class="of-linha {{ 'of-linha-eu' if ln.user_id == current_user.id else '' }}">
+      <div class="of-linha-head">
+        <span class="of-linha-nome">{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span>
+        {% if ln.metrica_valor is not none %}<span class="of-linha-mp">{{ "%.4f"|format(ln.metrica_valor) }}</span>{% endif %}
+      </div>
+      {{ nota_chips(ln) }}
+      {{ sou_eu(ln) }}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if nao_encontrados %}
+<section class="card">
+  <h2 class="card-title">Não encontrados no cadastro</h2>
+  <p class="card-sub">Nomes do colégio que não apareceram na lista do concurso — provavelmente não se inscreveram.</p>
+  <ul class="of-simples">
+    {% for ln in nao_encontrados %}
+    <li>
+      <span>{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span>
+      {{ sou_eu(ln) }}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<div class="form-actions">
+  {% if current_user.is_admin %}
+  <a class="btn btn-outline btn-block" href="{{ url_for('oficiais.importar') }}">Importar / atualizar turma</a>
+  {% for t in turmas %}
+  <form method="post" action="{{ url_for('oficiais.excluir', resultado_id=r.id) }}"
+        data-confirm="Excluir só a turma {{ TURMA_CURTO[t]|lower }} de {{ r.concurso_nome }} ({{ r.total_de(t) }} pessoas)?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="turma" value="{{ t }}">
+    <button type="submit" class="btn btn-outline btn-block btn-perigo-suave">
+      Excluir só {{ TURMA_CURTO[t]|lower }} ({{ r.total_de(t) }})
+    </button>
+  </form>
+  {% endfor %}
+  <form method="post" action="{{ url_for('oficiais.excluir', resultado_id=r.id) }}"
+        data-confirm="Excluir {{ r.concurso_nome }} INTEIRO, com todas as turmas ({{ r.linhas|length }} pessoas)? Essa ação não tem volta.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger btn-block">Excluir o concurso inteiro</button>
+  </form>
+  {% endif %}
+  <a class="btn btn-ghost btn-block" href="{{ url_for('oficiais.index') }}">Voltar</a>
+</div>
+{% endblock %}
