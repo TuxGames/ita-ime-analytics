@@ -24,6 +24,14 @@
   </p>
   {% endif %}
 
+  {% if preview.linhas_editadas %}
+  <p class="aviso-substitui aviso-perigo">
+    <strong>{{ preview.linhas_editadas|length }}</strong> pessoa(s) desta turma foram
+    editadas manualmente e vão perder essa edição se você confirmar:
+    {{ preview.linhas_editadas|join(", ") }}.
+  </p>
+  {% endif %}
+
   <ul class="preview-meta">
     <li><span>Prova</span><strong>{{ d.banca }} {{ d.rotulo }}</strong></li>
     <li><span>Data</span><strong>{{ d.data.strftime("%d/%m/%Y") }}</strong></li>

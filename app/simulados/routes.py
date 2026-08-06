@@ -25,11 +25,20 @@ from ..models import (
     SimuladoMateria,
     SimuladoTurma,
     SimuladoTurmaLinha,
+    normalizar_nome,
     turma_valida,
+    utcnow,
 )
 from ..oficiais_import import ErroImport
 from ..simulado_turma_import import aplicar as aplicar_turma
 from ..simulado_turma_import import parse as parse_turma
+from ..validacao import (
+    _texto,
+    validar_acertos,
+    validar_geral_oficial,
+    validar_nome_unico,
+    validar_status,
+)
 from ..vinculo import nome_ja_usado, revincular
 
 simulados_bp = Blueprint("simulados", __name__)
@@ -335,6 +344,13 @@ def turma_importar():
                         url_for("simulados.turma_detalhe", turma_id=simulado.id)
                     )
             else:
+                linhas_editadas = []
+                if existente is not None:
+                    linhas_editadas = [
+                        ln.nome
+                        for ln in existente.linhas
+                        if ln.turma == dados["turma"] and ln.editado_em is not None
+                    ]
                 preview = {
                     "dados": dados,
                     "prova": existente,
@@ -347,6 +363,7 @@ def turma_importar():
                         for t in (existente.turmas_presentes if existente else [])
                         if t != dados["turma"]
                     ],
+                    "linhas_editadas": linhas_editadas,
                 }
 
     return render_template(
@@ -452,6 +469,118 @@ def turma_excluir(turma_id):
 
     db.session.commit()
     flash(f"Turma {alvo_turma} excluída ({len(alvo)} pessoas).", "success")
+    return redirect(url_for("simulados.turma_detalhe", turma_id=turma.id))
+
+
+# --------------------------------------------------------------------------
+# Edição manual pelo admin (Fase B do plano) — correção pontual sem reimportar.
+# --------------------------------------------------------------------------
+
+
+def _aplicar_edicao_linha_turma(linha: SimuladoTurmaLinha, form) -> None:
+    """Valida e grava os campos editáveis de uma SimuladoTurmaLinha. Não comita.
+
+    Usa as mesmas funções de app/validacao.py que `parse()` usa no import."""
+    turma_obj = linha.turma_obj
+    onde = "edição"
+
+    nome = _texto(form.get("nome"), "nome", 120)
+    nome_norm = normalizar_nome(nome)
+
+    turma = turma_valida(form.get("turma"))
+    if turma is None:
+        raise ErroImport('O campo "turma" precisa ser "novata" ou "veterana".')
+
+    serie = _texto(form.get("serie"), "serie", 20, obrigatorio=False)
+
+    status = validar_status(form.get("status"), SimuladoTurmaLinha.STATUS, onde, nome)
+
+    acertos = {}
+    if status == "presente":
+        for materia in turma_obj.materias:
+            bruto = (form.get(f"acertos_{materia.name}") or "").strip()
+            if not bruto:
+                continue
+            if not bruto.lstrip("-").isdigit():
+                raise ErroImport(
+                    f"{onde} ({nome}): acertos de {materia.value} precisa ser inteiro."
+                )
+            certas = int(bruto)
+            total = turma_obj.questoes.get(materia.name, 0)
+            validar_acertos(certas, total, materia, onde, nome)
+            acertos[materia.name] = certas
+
+    def _opcional_float(campo, rotulo):
+        bruto = (form.get(campo) or "").strip()
+        if not bruto:
+            return None
+        try:
+            return float(bruto.replace(",", "."))
+        except ValueError:
+            raise ErroImport(f"{onde} ({nome}): {rotulo} precisa ser número.")
+
+    media_oficial = _opcional_float("media_oficial", "a média oficial")
+    geral_oficial = _opcional_float("geral_oficial", "o GERAL")
+
+    if status == "presente":
+        validar_geral_oficial(geral_oficial, sum(acertos.values()), onde, nome)
+
+    # Escopo é a PROVA INTEIRA (todas as turmas), não só a turma da linha.
+    validar_nome_unico(turma_obj.linhas, nome, nome_norm, turma, linha_id=linha.id)
+
+    linha.nome = nome
+    linha.nome_norm = nome_norm
+    linha.turma = turma
+    linha.serie = serie
+    linha.status = status
+    linha.set_acertos(acertos)
+    linha.media_oficial = media_oficial
+    linha.geral_oficial = geral_oficial
+
+
+@simulados_bp.post("/turma/linha/<int:linha_id>/editar")
+@admin_required
+def turma_linha_editar(linha_id):
+    linha = db.session.get(SimuladoTurmaLinha, linha_id)
+    if linha is None:
+        abort(404)
+    try:
+        _aplicar_edicao_linha_turma(linha, request.form)
+    except ErroImport as exc:
+        flash(str(exc), "error")
+    else:
+        linha.editado_em = utcnow()
+        linha.editado_por = current_user.id
+        db.session.commit()
+        flash(f"{linha.nome} atualizado.", "success")
+    return redirect(url_for("simulados.turma_detalhe", turma_id=linha.turma_id))
+
+
+@simulados_bp.post("/turma/<int:turma_id>/editar")
+@admin_required
+def turma_editar_cabecalho(turma_id):
+    """Só a fonte. Matérias/questões com linhas dentro mudam o significado dos
+    números já gravados (acertos, ranking) — bloqueado de propósito."""
+    turma = _get_turma(turma_id)
+
+    campos_bloqueados = {"materias", "materias_csv", "materias_media_csv", "questoes"}
+    if turma.linhas and campos_bloqueados & set(request.form.keys()):
+        flash(
+            "Matérias e questões não dão para editar com linhas já importadas — "
+            "exclua a prova e reimporte em vez disso.",
+            "error",
+        )
+        return redirect(url_for("simulados.turma_detalhe", turma_id=turma.id))
+
+    try:
+        fonte = _texto(request.form.get("fonte"), "fonte", 40, obrigatorio=False)
+    except ErroImport as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("simulados.turma_detalhe", turma_id=turma.id))
+
+    turma.fonte = fonte
+    db.session.commit()
+    flash("Cabeçalho atualizado.", "success")
     return redirect(url_for("simulados.turma_detalhe", turma_id=turma.id))
 
 

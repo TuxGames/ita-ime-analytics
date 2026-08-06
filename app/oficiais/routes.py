@@ -1,4 +1,5 @@
 import os
+from datetime import date
 
 from flask import (
     Blueprint,
@@ -15,8 +16,23 @@ from flask_login import current_user, login_required
 from ..decorators import admin_required
 from ..extensions import db
 from ..forms import ImportOficialForm
-from ..models import TURMA_CURTO, ResultadoLinha, ResultadoOficial, turma_valida
+from ..models import (
+    TURMA_CURTO,
+    ResultadoLinha,
+    ResultadoOficial,
+    normalizar_nome,
+    turma_valida,
+    utcnow,
+)
 from ..oficiais_import import ErroImport, aplicar, parse
+from ..validacao import (
+    _texto,
+    validar_classificacao,
+    validar_classificacao_unica,
+    validar_nome_unico,
+    validar_nota,
+    validar_status,
+)
 from ..vinculo import nome_ja_usado, revincular
 
 oficiais_bp = Blueprint("oficiais", __name__)
@@ -124,6 +140,15 @@ def importar():
             existente = db.session.scalar(
                 db.select(ResultadoOficial).filter_by(concurso_nome=dados["concurso"])
             )
+            # Linhas da turma que SERÁ substituída e que o admin já corrigiu à
+            # mão: o import não bloqueia, só avisa — quem decide é o admin.
+            linhas_editadas = []
+            if existente is not None:
+                linhas_editadas = [
+                    ln.nome
+                    for ln in existente.linhas
+                    if ln.turma == dados["turma"] and ln.editado_em is not None
+                ]
             preview = {
                 "dados": dados,
                 "concurso": existente,
@@ -137,6 +162,7 @@ def importar():
                     for t in (existente.turmas_presentes if existente else [])
                     if t != dados["turma"]
                 ],
+                "linhas_editadas": linhas_editadas,
             }
 
     return render_template(
@@ -185,6 +211,129 @@ def excluir(resultado_id):
 
     db.session.commit()
     flash(f"Turma {turma} excluída ({len(alvo)} pessoas).", "success")
+    return redirect(url_for("oficiais.detalhe", resultado_id=resultado.id))
+
+
+# --------------------------------------------------------------------------
+# Edição manual pelo admin (Fase B do plano) — correção pontual sem reimportar.
+# --------------------------------------------------------------------------
+
+
+def _aplicar_edicao_linha(linha: ResultadoLinha, form) -> None:
+    """Valida e grava os campos editáveis de uma ResultadoLinha. Não comita.
+
+    Usa as mesmas funções de app/validacao.py que `parse()` usa no import —
+    é o requisito de aceite: mesmo erro de valor, mesma mensagem."""
+    resultado = linha.resultado
+    onde = "edição"
+
+    nome = _texto(form.get("nome"), "nome", 120)
+    nome_norm = normalizar_nome(nome)
+
+    turma = turma_valida(form.get("turma"))
+    if turma is None:
+        raise ErroImport('O campo "turma" precisa ser "novata" ou "veterana".')
+
+    status = validar_status(
+        form.get("status"), ResultadoLinha.STATUS, onde, nome, com_underscore=True
+    )
+
+    classificacao = None
+    if status == "classificado":
+        bruto = (form.get("classificacao") or "").strip()
+        classificacao = int(bruto) if bruto.lstrip("-").isdigit() else None
+        validar_classificacao(classificacao, onde, nome)
+
+    metrica_valor = None
+    bruto_metrica = (form.get("metrica_valor") or "").strip()
+    if bruto_metrica:
+        try:
+            metrica_valor = float(bruto_metrica.replace(",", "."))
+        except ValueError:
+            raise ErroImport(f'{onde} ({nome}): "metrica" precisa ser número.')
+
+    notas = {}
+    for materia in resultado.materias:
+        bruto_nota = (form.get(f"nota_{materia.name}") or "").strip()
+        if not bruto_nota:
+            continue
+        try:
+            nota = float(bruto_nota.replace(",", "."))
+        except ValueError:
+            raise ErroImport(f"{onde} ({nome}): nota de {materia.value} precisa ser número.")
+        validar_nota(nota, resultado.escala, materia, onde, nome)
+        notas[materia.name] = nota
+
+    # Escopo é o CONCURSO INTEIRO (todas as turmas) — a classificação e o nome
+    # não são exclusividade de uma turma (ver B.3 do plano).
+    validar_nome_unico(resultado.linhas, nome, nome_norm, turma, linha_id=linha.id)
+    if status == "classificado":
+        validar_classificacao_unica(
+            resultado.linhas, classificacao, nome, turma, linha_id=linha.id
+        )
+
+    linha.nome = nome
+    linha.nome_norm = nome_norm
+    linha.turma = turma
+    linha.status = status
+    linha.classificacao = classificacao
+    linha.metrica_valor = metrica_valor
+    linha.set_notas(notas)
+
+
+@oficiais_bp.post("/linha/<int:linha_id>/editar")
+@admin_required
+def linha_editar(linha_id):
+    linha = db.session.get(ResultadoLinha, linha_id)
+    if linha is None:
+        abort(404)
+    try:
+        _aplicar_edicao_linha(linha, request.form)
+    except ErroImport as exc:
+        flash(str(exc), "error")
+    else:
+        linha.editado_em = utcnow()
+        linha.editado_por = current_user.id
+        db.session.commit()
+        flash(f"{linha.nome} atualizado.", "success")
+    return redirect(url_for("oficiais.detalhe", resultado_id=linha.resultado_id))
+
+
+@oficiais_bp.post("/<int:resultado_id>/editar")
+@admin_required
+def editar_cabecalho(resultado_id):
+    """Só os metadados (fonte, data, métrica). Matérias/escala com linhas dentro
+    mudam o significado de todos os números já gravados — bloqueado de propósito."""
+    resultado = db.session.get(ResultadoOficial, resultado_id)
+    if resultado is None:
+        abort(404)
+
+    campos_bloqueados = {"materias", "materias_csv", "escala"}
+    if resultado.linhas and campos_bloqueados & set(request.form.keys()):
+        flash(
+            "Matérias e escala não dão para editar com linhas já importadas — "
+            "exclua o concurso e reimporte em vez disso.",
+            "error",
+        )
+        return redirect(url_for("oficiais.detalhe", resultado_id=resultado.id))
+
+    try:
+        fonte = _texto(request.form.get("fonte"), "fonte", 40, obrigatorio=False)
+        metrica = _texto(request.form.get("metrica"), "metrica", 20, obrigatorio=False)
+        bruto_data = (request.form.get("data") or "").strip()
+        data = date.fromisoformat(bruto_data) if bruto_data else None
+    except ErroImport as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("oficiais.detalhe", resultado_id=resultado.id))
+    except ValueError:
+        flash('"data" precisa estar no formato AAAA-MM-DD.', "error")
+        return redirect(url_for("oficiais.detalhe", resultado_id=resultado.id))
+
+    resultado.fonte = fonte
+    resultado.metrica = metrica
+    resultado.data = data
+    db.session.commit()
+    flash("Cabeçalho atualizado.", "success")
     return redirect(url_for("oficiais.detalhe", resultado_id=resultado.id))
 
 

@@ -27,6 +27,14 @@
   </p>
   {% endif %}
 
+  {% if preview.linhas_editadas %}
+  <p class="aviso-substitui aviso-perigo">
+    <strong>{{ preview.linhas_editadas|length }}</strong> pessoa(s) desta turma foram
+    editadas manualmente e vão perder essa edição se você confirmar:
+    {{ preview.linhas_editadas|join(", ") }}.
+  </p>
+  {% endif %}
+
   <ul class="preview-meta">
     <li><span>Concurso</span><strong>{{ d.concurso }}</strong></li>
     <li><span>Turma</span><strong>{{ d.turma }}</strong></li>

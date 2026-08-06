@@ -12,6 +12,19 @@ from datetime import date
 
 from .alunos import resolver_aluno
 from .models import Materia, ResultadoLinha, ResultadoOficial, normalizar_nome
+from .validacao import (
+    ErroImport,
+    _ALIAS_TURMA,
+    _texto,
+    validar_classificacao,
+    validar_nota,
+    validar_status,
+)
+
+# Reexportada por compatibilidade: `simulado_turma_import.py` (e outros pontos
+# do app) importa ErroImport daqui — ela mora de fato em validacao.py, junto
+# com o resto da lógica compartilhada entre import e edição manual.
+__all__ = ["ErroImport", "materia_por_codigo", "parse", "aplicar"]
 
 TIPOS_SUPORTADOS = ("oficial",)
 
@@ -27,31 +40,10 @@ _ALIAS_MATERIA = {
     "HIST": Materia.HISTORIA, "HISTORIA": Materia.HISTORIA,
 }
 
-_ALIAS_TURMA = {
-    "NOVATA": "novata", "NOVATAS": "novata", "NOVATO": "novata", "NOVATOS": "novata",
-    "VETERANA": "veterana", "VETERANAS": "veterana",
-    "VETERANO": "veterana", "VETERANOS": "veterana",
-}
-
-
-class ErroImport(Exception):
-    """Erro de validação, com mensagem já pronta para mostrar ao admin."""
-
 
 def materia_por_codigo(codigo):
     """Materia a partir de 'MAT', 'Matemática', 'QUÍM'... ou None."""
     return _ALIAS_MATERIA.get(normalizar_nome(codigo).replace(" ", ""))
-
-
-def _texto(valor, campo, maximo, obrigatorio=True):
-    if valor is None or (isinstance(valor, str) and not valor.strip()):
-        if obrigatorio:
-            raise ErroImport(f'O campo "{campo}" é obrigatório.')
-        return None
-    texto = str(valor).strip()
-    if len(texto) > maximo:
-        raise ErroImport(f'O campo "{campo}" passa de {maximo} caracteres.')
-    return texto
 
 
 def _numero(valor, campo):
@@ -76,21 +68,13 @@ def _linha(bruta, indice, materias, escala, turma):
         raise ErroImport(f"{onde}: cada item de 'resultados' precisa ser um objeto.")
 
     nome = _texto(bruta.get("nome"), f"nome ({onde})", 120)
-    status = normalizar_nome(bruta.get("status")).lower().replace(" ", "_")
-    if status not in ResultadoLinha.STATUS:
-        raise ErroImport(
-            f"{onde} ({nome}): status inválido {bruta.get('status')!r}. "
-            f"Use um de: {', '.join(ResultadoLinha.STATUS)}."
-        )
+    status = validar_status(
+        bruta.get("status"), ResultadoLinha.STATUS, onde, nome, com_underscore=True
+    )
 
     classificacao = bruta.get("classificacao")
     if status == "classificado":
-        if classificacao is None:
-            raise ErroImport(f"{onde} ({nome}): classificado precisa de 'classificacao'.")
-        if isinstance(classificacao, bool) or not isinstance(classificacao, int):
-            raise ErroImport(f"{onde} ({nome}): 'classificacao' precisa ser inteiro.")
-        if classificacao < 1:
-            raise ErroImport(f"{onde} ({nome}): 'classificacao' precisa ser >= 1.")
+        validar_classificacao(classificacao, onde, nome)
     else:
         classificacao = None
 
@@ -112,11 +96,7 @@ def _linha(bruta, indice, materias, escala, turma):
                 f"{onde} ({nome}): {materia.value} não está na lista 'materias' do cabeçalho."
             )
         nota = _numero(valor, f"nota de {materia.value} ({onde}, {nome})")
-        if nota < 0 or nota > escala:
-            raise ErroImport(
-                f"{onde} ({nome}): nota de {materia.value} = {nota} fora da escala 0–{escala:g}. "
-                "Confira a extração."
-            )
+        validar_nota(nota, escala, materia, onde, nome)
         notas[materia.name] = nota
 
     if status != "nao_encontrado" and not notas:

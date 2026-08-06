@@ -1,6 +1,54 @@
 {% extends "base.html" %}
 {% block title %}{{ t.nome }} — ITA-IME Analytics{% endblock %}
 
+{% macro editar_linha(ln) %}
+{% if current_user.is_admin %}
+<details class="extras">
+  <summary>Editar{% if ln.editado_em %} <span class="serie-chip">editado</span>{% endif %}</summary>
+  <form method="post" action="{{ url_for('simulados.turma_linha_editar', linha_id=ln.id) }}" class="form-edicao">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label class="form-label">Nome</label>
+      <input class="input" type="text" name="nome" value="{{ ln.nome }}" maxlength="120">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Turma</label>
+      <select class="input" name="turma">
+        <option value="novata" {% if ln.turma == "novata" %}selected{% endif %}>Novata</option>
+        <option value="veterana" {% if ln.turma == "veterana" %}selected{% endif %}>Veterana</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Série</label>
+      <input class="input" type="text" name="serie" value="{{ ln.serie or '' }}" maxlength="20">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="input" name="status">
+        <option value="presente" {% if ln.status == "presente" %}selected{% endif %}>Presente</option>
+        <option value="ausente" {% if ln.status == "ausente" %}selected{% endif %}>Ausente</option>
+      </select>
+    </div>
+    {% for m in materias %}
+    <div class="form-group">
+      <label class="form-label">Acertos {{ m.value }} (de {{ t.questoes.get(m.name) }})</label>
+      <input class="input" type="text" name="acertos_{{ m.name }}" value="{% if ln.acertos.get(m.name) is not none %}{{ ln.acertos[m.name] }}{% endif %}">
+    </div>
+    {% endfor %}
+    <div class="form-group">
+      <label class="form-label">Média oficial</label>
+      <input class="input" type="text" name="media_oficial" value="{% if ln.media_oficial is not none %}{{ ln.media_oficial }}{% endif %}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Geral oficial</label>
+      <input class="input" type="text" name="geral_oficial" value="{% if ln.geral_oficial is not none %}{{ ln.geral_oficial }}{% endif %}">
+    </div>
+    <button type="submit" class="btn btn-outline btn-sm">Salvar edição</button>
+  </form>
+</details>
+{% endif %}
+{% endmacro %}
+
 {% block content %}
 <div class="page-head">
   <div>
@@ -101,6 +149,7 @@
         <button type="submit" class="linklike">sou eu</button>
       </form>
       {% endif %}
+      {{ editar_linha(ln) }}
     </li>
     {% endfor %}
   </ul>
@@ -148,6 +197,24 @@
     </button>
   </form>
   {% endif %}
+</section>
+{% endif %}
+
+{% if current_user.is_admin %}
+<section class="card">
+  <h2 class="card-title">Cabeçalho</h2>
+  <p class="card-sub">
+    Só a fonte. Matérias e questões não dão para editar aqui — têm linhas gravadas
+    com esses números; exclua e reimporte se precisar mudá-las.
+  </p>
+  <form method="post" action="{{ url_for('simulados.turma_editar_cabecalho', turma_id=t.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label class="form-label">Fonte</label>
+      <input class="input" type="text" name="fonte" value="{{ t.fonte or '' }}" maxlength="40">
+    </div>
+    <button type="submit" class="btn btn-outline btn-block">Salvar cabeçalho</button>
+  </form>
 </section>
 {% endif %}
 

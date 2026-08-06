@@ -17,23 +17,13 @@ from .models import (
     normalizar_nome,
 )
 from .oficiais_import import ErroImport, materia_por_codigo
-
-_ALIAS_TURMA = {
-    "NOVATA": "novata", "NOVATAS": "novata", "NOVATO": "novata", "NOVATOS": "novata",
-    "VETERANA": "veterana", "VETERANAS": "veterana",
-    "VETERANO": "veterana", "VETERANOS": "veterana",
-}
-
-
-def _texto(valor, campo, maximo, obrigatorio=True):
-    if valor is None or (isinstance(valor, str) and not valor.strip()):
-        if obrigatorio:
-            raise ErroImport(f'O campo "{campo}" é obrigatório.')
-        return None
-    texto = str(valor).strip()
-    if len(texto) > maximo:
-        raise ErroImport(f'O campo "{campo}" passa de {maximo} caracteres.')
-    return texto
+from .validacao import (
+    _ALIAS_TURMA,
+    _texto,
+    validar_acertos,
+    validar_geral_oficial,
+    validar_status,
+)
 
 
 def _inteiro(valor, campo):
@@ -79,12 +69,9 @@ def _linha(bruta, indice, materias, questoes, turma):
         raise ErroImport(f"{onde}: cada item de 'resultados' precisa ser um objeto.")
 
     nome = _texto(bruta.get("nome"), f"nome ({onde})", 120)
-    status = normalizar_nome(bruta.get("status", "presente")).lower()
-    if status not in SimuladoTurmaLinha.STATUS:
-        raise ErroImport(
-            f"{onde} ({nome}): status inválido {bruta.get('status')!r}. "
-            f"Use um de: {', '.join(SimuladoTurmaLinha.STATUS)}."
-        )
+    status = validar_status(
+        bruta.get("status", "presente"), SimuladoTurmaLinha.STATUS, onde, nome
+    )
 
     serie = _texto(bruta.get("serie"), f"serie ({onde})", 20, obrigatorio=False)
 
@@ -112,11 +99,7 @@ def _linha(bruta, indice, materias, questoes, turma):
             )
         total = questoes[materia.name]
         certas = _inteiro(valor, f"acertos de {materia.value} ({onde}, {nome})")
-        if certas < 0 or certas > total:
-            raise ErroImport(
-                f"{onde} ({nome}): {certas} acertos em {materia.value}, mas a prova "
-                f"tem {total} questões. Confira a extração."
-            )
+        validar_acertos(certas, total, materia, onde, nome)
         acertos[materia.name] = certas
 
     faltando = [m.value for m in materias if m.name not in acertos]
@@ -139,11 +122,7 @@ def _linha(bruta, indice, materias, questoes, turma):
 
     geral = numero("geral_oficial")
     soma = sum(acertos.values())
-    if geral is not None and abs(geral - soma) > 0.01:
-        raise ErroImport(
-            f"{onde} ({nome}): a coluna GERAL diz {geral:g}, mas a soma dos acertos "
-            f"dá {soma}. Alguma célula foi lida errado."
-        )
+    validar_geral_oficial(geral, soma, onde, nome)
 
     return {
         "nome": nome, "nome_norm": normalizar_nome(nome), "serie": serie,

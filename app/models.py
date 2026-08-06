@@ -484,9 +484,14 @@ class SimuladoTurmaLinha(db.Model):
     media_oficial = db.Column(db.Float, nullable=True)
     geral_oficial = db.Column(db.Float, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    # Marca edição manual do admin. Um reimport da turma NÃO apaga uma linha
+    # editada silenciosamente — ele só avisa no preview (ver B.1 do plano).
+    editado_em = db.Column(db.DateTime, nullable=True)
+    editado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     turma_obj = db.relationship("SimuladoTurma", back_populates="linhas")
-    user = db.relationship("User")
+    user = db.relationship("User", foreign_keys=[user_id])
+    editor = db.relationship("User", foreign_keys=[editado_por])
 
     @property
     def acertos(self) -> dict:
@@ -625,9 +630,14 @@ class ResultadoLinha(db.Model):
     notas_json = db.Column(db.Text, nullable=True)
     # Preenchido automaticamente quando o nome casa com o nome_oficial de alguém.
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    # Marca edição manual do admin. Um reimport da turma NÃO apaga uma linha
+    # editada silenciosamente — ele só avisa no preview (ver B.1 do plano).
+    editado_em = db.Column(db.DateTime, nullable=True)
+    editado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     resultado = db.relationship("ResultadoOficial", back_populates="linhas")
-    user = db.relationship("User")
+    user = db.relationship("User", foreign_keys=[user_id])
+    editor = db.relationship("User", foreign_keys=[editado_por])
 
     @property
     def notas(self) -> dict:
