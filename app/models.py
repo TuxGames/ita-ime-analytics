@@ -419,20 +419,28 @@ class SimuladoTurma(db.Model):
         return [t for t in TURMAS if t in existentes]
 
     def nota_de(self, linha, materias) -> float | None:
-        """Média dos percentuais de acerto nas `materias` escolhidas, escala 0–10.
+        """Nota nas `materias` escolhidas, escala 0–10, PROPORCIONAL às questões.
 
-        Peso igual entre matérias: é a regra da 1ª fase do IME, e no ITA (todas
-        com 12 questões) dá exatamente o mesmo número que a média do colégio."""
+        nota = (soma dos acertos das matérias consideradas) /
+               (soma do total de questões dessas matérias) * 10
+
+        É a mesma conta que o colégio faz (bate com `media_oficial` guardado no
+        import — ex.: IME MAT 15/FIS 15/QUIM 10, acertos 11+11+4 -> 26/40*10 =
+        6,50). No ITA (12 questões em todas as matérias) essa fórmula coincide
+        com a média simples dos percentuais, então não muda nada relativo ao
+        ITA — a diferença só aparece quando as matérias têm pesos diferentes,
+        como no IME."""
         acertos, questoes = linha.acertos, self.questoes
-        percentuais = []
+        soma_acertos, soma_questoes = 0, 0
         for materia in materias:
             total = questoes.get(materia.name)
             valor = acertos.get(materia.name)
             if total and valor is not None:
-                percentuais.append(valor / total)
-        if not percentuais:
+                soma_acertos += valor
+                soma_questoes += total
+        if not soma_questoes:
             return None
-        return round(10.0 * sum(percentuais) / len(percentuais), 2)
+        return round(10.0 * soma_acertos / soma_questoes, 2)
 
     def ranking(self, materias, turma=None) -> list:
         """[(posicao, linha, nota)] ordenado por nota. Empate = mesma posição.

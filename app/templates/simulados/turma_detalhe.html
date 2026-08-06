@@ -97,9 +97,10 @@
     <span class="card-sub-inline" id="recorte-resumo"></span>
   </div>
   <p class="card-sub">
-    Marque as matérias e o ranking se refaz. A nota é a média dos percentuais de acerto,
-    em escala 0–10 — a mesma régua da 1ª fase do IME{% if t.banca|upper == "ITA" %} e, no ITA,
-    o mesmo número da MÉDIA do colégio{% endif %}.
+    Marque as matérias e o ranking se refaz. A nota é (soma dos acertos) / (soma do
+    total de questões) das matérias marcadas, em escala 0–10 — proporcional ao número
+    de questões de cada matéria, a mesma conta do colégio{% if t.banca|upper == "ITA" %}
+    (no ITA, com 12 questões em tudo, dá o mesmo número da MÉDIA do colégio){% endif %}.
   </p>
 
   <div class="recorte-presets">

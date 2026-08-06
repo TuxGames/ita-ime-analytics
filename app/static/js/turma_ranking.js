@@ -31,21 +31,23 @@
   }
 
   // ---------- Cálculo ----------
-  // Nota = média dos percentuais das matérias marcadas, em escala 0–10.
-  // Peso igual entre matérias (regra da 1ª fase do IME; no ITA, com 12 questões
-  // em tudo, dá exatamente a MÉDIA do colégio).
+  // Nota = (soma dos acertos) / (soma do total de questões) das matérias
+  // marcadas, em escala 0–10 — proporcional ao número de questões de cada
+  // matéria (a mesma conta que o colégio faz). No ITA, com 12 questões em
+  // tudo, dá exatamente a MÉDIA do colégio; no IME, pesa mais quem tem mais
+  // questões (ex.: MAT/FIS com 15 pesam mais que QUIM com 10).
   function nota(acertos) {
-    var soma = 0, n = 0;
+    var somaAcertos = 0, somaQuestoes = 0;
     for (var i = 0; i < selecionadas.length; i++) {
       var nome = selecionadas[i];
       var total = questoes[nome];
       var certas = acertos[nome];
       if (total && certas !== undefined && certas !== null) {
-        soma += certas / total;
-        n += 1;
+        somaAcertos += certas;
+        somaQuestoes += total;
       }
     }
-    return n ? Math.round((10 * soma / n) * 100) / 100 : null;
+    return somaQuestoes ? Math.round((10 * somaAcertos / somaQuestoes) * 100) / 100 : null;
   }
 
   function ranquear() {

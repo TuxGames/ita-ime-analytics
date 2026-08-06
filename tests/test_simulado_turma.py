@@ -211,6 +211,37 @@ def test_nota_reproduz_a_media_do_colegio_no_ita(app, db, admin):
     assert prova.nota_de(linha, prova.materias_media) == pytest.approx(5.28, abs=0.01)
 
 
+def test_nota_e_proporcional_ao_numero_de_questoes_no_ime(app, db, admin):
+    """IME: MAT e FIS têm 15 questões, QUIM tem 10 — pesos diferentes.
+
+    Acertos 11+11+4 = 26 de 40 questões -> 26/40*10 = 6,50, que é exatamente o
+    que a planilha do colégio imprime (peso igual daria 6,22)."""
+    dados = payload_simulado(
+        banca="IME",
+        rotulo="S6",
+        materias=["MAT", "FIS", "QUIM"],
+        materias_media=["MAT", "FIS", "QUIM"],
+        questoes=None,
+        resultados=[
+            {
+                "nome": "ALUNO IME UM",
+                "serie": "3º ANO",
+                "status": "presente",
+                "acertos": {"MAT": 11, "FIS": 11, "QUIM": 4},
+                "media_oficial": 6.50,
+                "geral_oficial": 26,
+            },
+        ],
+    )
+    aplicar(db, _parse(dados), admin.id)
+    db.session.commit()
+
+    prova = db.session.scalar(db.select(SimuladoTurma))
+    assert prova.questoes == {"MATEMATICA": 15, "FISICA": 15, "QUIMICA": 10}
+    linha = prova.linhas[0]
+    assert prova.nota_de(linha, prova.materias_media) == pytest.approx(6.50, abs=0.01)
+
+
 def test_presentes_e_ausentes_aceitam_filtro(app, db, admin):
     aplicar(db, _parse(payload_simulado("novata")), admin.id)
     aplicar(db, _parse(payload_simulado("veterana")), admin.id)
