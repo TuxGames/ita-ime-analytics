@@ -14,6 +14,7 @@ Nada aqui dá commit: quem comita é a rota, como no resto do projeto.
 """
 
 from .extensions import db
+from .grouping import banca_curta
 from .models import Concurso, Simulado, SimuladoMateria, SimuladoTurma, SimuladoTurmaLinha
 
 
@@ -42,10 +43,14 @@ def linhas_pendentes(user_id: int) -> list["SimuladoTurmaLinha"]:
 
 
 def concursos_por_banca() -> dict:
-    """{banca_upper: [Concurso, ...]} — para casar a banca da turma com concursos."""
+    """{banca_curta: [Concurso, ...]} — para casar a banca da turma com concursos.
+
+    `Concurso.banca` inclui o ano ("ITA 2027"); `SimuladoTurma.banca` não ("ITA").
+    `banca_curta()` normaliza os dois lados para o mesmo token antes de comparar
+    — sem isso o casamento automático nunca acontecia."""
     mapa = {}
     for concurso in db.session.scalars(db.select(Concurso).order_by(Concurso.data_prova)):
-        mapa.setdefault(concurso.banca.upper(), []).append(concurso)
+        mapa.setdefault(banca_curta(concurso.nome), []).append(concurso)
     return mapa
 
 
@@ -54,7 +59,7 @@ def sugerir_concurso(linha: "SimuladoTurmaLinha", mapa_bancas: dict) -> "Concurs
 
     Duas ou mais fases da mesma banca (ex.: ITA 1ª/2ª fase) são ambíguas — fica
     pendente de escolha manual, como o C.3 do plano pede."""
-    candidatos = mapa_bancas.get(linha.turma_obj.banca.upper())
+    candidatos = mapa_bancas.get(banca_curta(linha.turma_obj.banca))
     if candidatos and len(candidatos) == 1:
         return candidatos[0]
     return None
@@ -89,6 +94,7 @@ def sincronizar_linha(linha: "SimuladoTurmaLinha", concurso: "Concurso", user_id
     simulado = existente or Simulado(user_id=user_id)
     simulado.concurso_id = concurso.id
     simulado.rotulo = turma.rotulo
+    simulado.fase = turma.fase
     simulado.data_simulado = turma.data
     simulado.origem = "import"
     simulado.turma_linha_id = linha.id

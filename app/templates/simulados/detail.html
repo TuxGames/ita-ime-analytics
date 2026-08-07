@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>{% if simulado.rotulo %}{{ simulado.rotulo }} · {% endif %}{{ simulado.data_simulado.strftime("%d/%m/%Y") }}</h1>
+    <h1>{{ simulado.titulo_curto }} · {{ simulado.data_simulado.strftime("%d/%m/%Y") }}</h1>
     <p class="page-sub">{{ simulado.concurso.nome }}</p>
     {% if simulado.veio_de_import %}
     <p class="page-sub origem-import">Números vindos do ranking da turma</p>

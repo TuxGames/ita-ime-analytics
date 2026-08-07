@@ -140,6 +140,12 @@ class SimuladoForm(FlaskForm):
         "Nome do simulado",
         validators=[Optional(), Length(max=20, message="Use no máximo 20 caracteres.")],
     )
+    fase = SelectField(
+        "Fase",
+        choices=[("", "Não informar"), ("objetiva", "1ª fase"), ("discursiva", "2ª fase")],
+        validators=[Optional()],
+        default="",
+    )
     data_simulado = DateField(
         "Data do simulado", validators=[DataRequired("Informe a data.")]
     )

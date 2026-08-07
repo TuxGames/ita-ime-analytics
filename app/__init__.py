@@ -53,9 +53,10 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(oficiais_bp, url_prefix="/oficiais")
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
-    from .grouping import rotulo_curto
+    from .grouping import compor_titulo, rotulo_curto
 
     app.jinja_env.filters["rotulo_curto"] = rotulo_curto
+    app.jinja_env.globals["titulo_simulado"] = compor_titulo
 
     from .security import register_security_headers
 

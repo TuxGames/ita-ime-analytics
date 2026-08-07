@@ -38,7 +38,7 @@
       <div class="sim-card-top">
         <div>
           <p class="sim-date">
-            {% if s.rotulo %}<span class="badge-rotulo">{{ s.rotulo }}</span>{% endif %}
+            <span class="badge-rotulo">{{ s.titulo_curto }}</span>
             {{ s.data_simulado.strftime("%d/%m/%Y") }}
           </p>
           <p class="sim-concurso">{{ s.concurso.nome }}</p>
@@ -69,7 +69,7 @@
     <tbody>
       {% for s in simulados %}
       <tr>
-        <td>{% if s.rotulo %}<span class="badge-rotulo">{{ s.rotulo }}</span>{% else %}—{% endif %}</td>
+        <td><span class="badge-rotulo">{{ s.titulo_curto }}</span></td>
         <td>{{ s.data_simulado.strftime("%d/%m/%Y") }}</td>
         <td>{{ s.concurso.nome }}</td>
         <td class="td-nota">{{ "%.1f"|format(s.nota_geral) }}</td>

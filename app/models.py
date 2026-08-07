@@ -69,6 +69,10 @@ TURMAS = ("novata", "veterana")
 TURMA_LABEL = {"novata": "Turma novata", "veterana": "Turma veterana"}
 TURMA_CURTO = {"novata": "Novatos", "veterana": "Veteranos"}
 
+# Rótulo de exibição da fase do simulado (mesmos valores de SimuladoTurma.FASES
+# e Simulado.fase). Usado no título curto do simulado pessoal.
+FASE_LABEL = {"objetiva": "1ª fase", "discursiva": "2ª fase"}
+
 
 def turma_valida(valor):
     """Devolve a turma se for uma das conhecidas, senão None (filtro inválido)."""
@@ -261,6 +265,10 @@ class Simulado(db.Model):
     # Rótulo que o colégio dá à prova (S0, S1, S3...). Serve para identificar o
     # mesmo simulado entre pessoas diferentes.
     rotulo = db.Column(db.String(20), nullable=True)
+    # Mesmos valores de SimuladoTurma.FASES ("objetiva"/"discursiva"). Opcional:
+    # quem digita à mão pode não saber ou não se importar; quem vem do ranking
+    # da turma sempre traz junto (Bloco 1 — sem isso a fase se perdia no sync).
+    fase = db.Column(db.String(20), nullable=True)
     data_simulado = db.Column(db.Date, nullable=False)
     nota_geral = db.Column(db.Float, nullable=False)
     # True = nota_geral foi calculada (média dos % das matérias); False = digitada.
@@ -286,6 +294,16 @@ class Simulado(db.Model):
     @property
     def veio_de_import(self) -> bool:
         return self.origem == "import"
+
+    @property
+    def titulo_curto(self) -> str:
+        """"ITA S5 · 1ª fase" — banca (sem ano) + rótulo + fase, quando existirem.
+
+        Hoje `rotulo` e `concurso.nome` aparecem soltos nas telas; isto junta os
+        pedaços num título só, sem criar Concurso nenhum novo para isso."""
+        from .grouping import compor_titulo
+
+        return compor_titulo(self.concurso.nome, self.rotulo, self.fase)
 
     user = db.relationship("User", back_populates="simulados")
     concurso = db.relationship("Concurso", back_populates="simulados")

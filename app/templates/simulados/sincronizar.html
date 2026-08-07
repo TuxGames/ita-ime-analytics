@@ -30,7 +30,7 @@
       <li>
         <div class="form-group">
           <label class="form-label">
-            {{ t.nome }} — {{ t.data.strftime("%d/%m/%Y") }}
+            {{ titulo_simulado(t.banca, t.rotulo, t.fase) }} — {{ t.data.strftime("%d/%m/%Y") }}
             {%- if not item.sugestao %} <span class="serie-chip">escolha o concurso</span>{% endif %}
           </label>
           <select class="input" name="concurso_{{ ln.id }}">

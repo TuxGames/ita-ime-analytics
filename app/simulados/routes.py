@@ -109,6 +109,7 @@ def _rotulos_usados() -> list:
 def _aplicar_form(form: SimuladoForm, simulado: Simulado) -> None:
     simulado.concurso_id = form.concurso_id.data
     simulado.rotulo = (form.rotulo.data or "").strip() or None
+    simulado.fase = form.fase.data or None
     simulado.data_simulado = form.data_simulado.data
     simulado.posicao_estimada = form.posicao_estimada.data
     simulado.observacao = form.observacao.data or None
@@ -749,6 +750,7 @@ def turma_trazer(turma_id):
     simulado = existente or Simulado(user_id=current_user.id)
     simulado.concurso_id = concurso.id
     simulado.rotulo = turma.rotulo
+    simulado.fase = turma.fase
     simulado.data_simulado = turma.data
     simulado.origem = "import"
     simulado.nota_geral = round(sum(percentuais) / len(percentuais), 2)

@@ -22,8 +22,12 @@ def _semear(db, admin, aluno, rotulo="S3"):
 
 
 def _concurso_ita(db, admin):
+    # Convenção real de cadastro: banca e ano no mesmo campo, sem " - " (é o
+    # que "ITA 2027 - 2ª Fase" também respeitaria) — é o formato que aparece
+    # em produção, diferente do "ITA - 2027" que compor_nome("ITA", "2027")
+    # produziria se o ano fosse tratado como etapa.
     concurso = Concurso(
-        nome=Concurso.compor_nome("ITA", "2027"),
+        nome="ITA 2027",
         data_prova=date(2027, 11, 1),
         created_by=admin.id,
     )
@@ -45,6 +49,40 @@ def test_sugerir_concurso_casa_por_banca_unica(app, db, admin, criar_usuario):
     assert sugerir_concurso(linha, mapa).id == concurso.id
 
 
+def test_sugerir_concurso_casa_ita_com_ita_2027(app, db, admin, criar_usuario):
+    """O bug original: SimuladoTurma.banca é "ITA" (sem ano), Concurso.nome é
+    "ITA 2027" — antes do Bloco 1 esses dois textos nunca casavam e a
+    sincronização em lote sempre caía em escolha manual."""
+    aluno = criar_usuario("aluno", nome_oficial="ALUNO NOVATA UM")
+    turma = _semear(db, admin, aluno)
+    assert turma.banca == "ITA"
+    concurso = _concurso_ita(db, admin)
+    assert concurso.nome == "ITA 2027"
+
+    linha = next(ln for ln in turma.linhas if ln.user_id == aluno.id)
+    mapa = concursos_por_banca()
+    sugestao = sugerir_concurso(linha, mapa)
+    assert sugestao is not None
+    assert sugestao.id == concurso.id
+
+
+def test_sugerir_concurso_ambiguo_com_duas_fases_da_mesma_banca(app, db, admin, criar_usuario):
+    aluno = criar_usuario("aluno", nome_oficial="ALUNO NOVATA UM")
+    turma = _semear(db, admin, aluno)
+    _concurso_ita(db, admin)
+    segunda_fase = Concurso(
+        nome="ITA 2027 - 2ª Fase",
+        data_prova=date(2027, 12, 1),
+        created_by=admin.id,
+    )
+    db.session.add(segunda_fase)
+    db.session.commit()
+
+    linha = next(ln for ln in turma.linhas if ln.user_id == aluno.id)
+    mapa = concursos_por_banca()
+    assert sugerir_concurso(linha, mapa) is None
+
+
 def test_sincronizar_duas_vezes_nao_duplica(app, db, admin, criar_usuario):
     aluno = criar_usuario("aluno", nome_oficial="ALUNO NOVATA UM")
     turma = _semear(db, admin, aluno)
@@ -59,6 +97,10 @@ def test_sincronizar_duas_vezes_nao_duplica(app, db, admin, criar_usuario):
     assert resultado is not None
     assert resultado.turma_linha_id == linha.id
     assert resultado.origem == "import"
+    # A fase da prova (SimuladoTurma.fase) acompanha o Simulado pessoal — antes
+    # do Bloco 1 essa informação se perdia na sincronização.
+    assert resultado.fase == "objetiva" == turma.fase
+    assert resultado.titulo_curto == "ITA S3 · 1ª fase"
 
     # Segunda rodada: a linha não aparece mais como pendente.
     assert linhas_pendentes(aluno.id) == []
