@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Meus grupos — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Meus grupos</h1>
+  <a class="btn btn-primary btn-sm" href="{{ url_for('grupos.novo') }}">+ Novo grupo</a>
+</div>
+
+{% if not vinculos %}
+<section class="card empty-state">
+  <h2>Nenhum grupo ainda</h2>
+  <p>Crie um grupo e convide colegas para acompanhar quanto cada um estudou — nunca o tempo, só questões e simulados.</p>
+  <a class="btn btn-primary" href="{{ url_for('grupos.novo') }}">Criar meu primeiro grupo</a>
+</section>
+{% else %}
+<ul class="cards-list">
+  {% for v in vinculos %}
+  <li>
+    {% if v.status == "convidado" %}
+    <div class="card">
+      <p class="sim-concurso">Convite pendente</p>
+      <p class="sim-nota-value">{{ v.grupo.nome }}</p>
+      <div class="form-actions" style="margin-top:10px;">
+        <form method="post" action="{{ url_for('grupos.aceitar', grupo_id=v.grupo.id) }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary btn-sm">Aceitar</button>
+        </form>
+        <form method="post" action="{{ url_for('grupos.recusar', grupo_id=v.grupo.id) }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-ghost btn-sm">Recusar</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <a class="card sim-card" href="{{ url_for('grupos.detalhe', grupo_id=v.grupo.id) }}">
+      <p class="sim-nota-value">{{ v.grupo.nome }}</p>
+      <p class="sim-concurso">{% if v.grupo.criado_por == current_user.id %}você é dono{% else %}membro{% endif %}</p>
+    </a>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

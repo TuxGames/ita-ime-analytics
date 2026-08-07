@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Convite — {{ grupo.nome }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Convite para "{{ grupo.nome }}"</h1>
+</div>
+
+<section class="card empty-state">
+  <h2>{{ grupo.dono.username }} te convidou</h2>
+  <p>
+    Aceitando, seus colegas passam a ver quantas questões você fez (com acerto) e
+    quantos simulados fez, por período — nunca o tempo de estudo. Antes de aceitar,
+    nada seu aparece pra ninguém do grupo.
+  </p>
+  <div class="form-actions">
+    <form method="post" action="{{ url_for('grupos.aceitar', grupo_id=grupo.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-primary btn-block">Aceitar convite</button>
+    </form>
+    <form method="post" action="{{ url_for('grupos.recusar', grupo_id=grupo.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-ghost btn-block">Recusar</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

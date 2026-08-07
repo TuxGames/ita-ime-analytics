@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Novo grupo — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Novo grupo</h1>
+</div>
+
+<section class="card">
+  <p class="card-sub">
+    Compartilha questões feitas (com acerto) e simulados feitos entre os membros —
+    nunca tempo de estudo. Convidado só aparece depois de aceitar.
+  </p>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      {{ form.nome.label(class="form-label") }}
+      {{ form.nome(class="input" + (" input-error" if form.nome.errors else ""), maxlength="60") }}
+      {% for e in form.nome.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Criar grupo</button>
+  </form>
+</section>
+
+<div class="form-actions">
+  <a class="btn btn-ghost btn-block" href="{{ url_for('grupos.listar') }}">Cancelar</a>
+</div>
+{% endblock %}

@@ -412,3 +412,23 @@ class ConcursoForm(FlaskForm):
         nomes = {m.name for m in materias}
         self.materias.data = [m.name for m in MATERIAS_PRINCIPAIS if m.name in nomes]
         self.materias_extras.data = [m.name for m in MATERIAS_DISCRETAS if m.name in nomes]
+
+
+class GrupoForm(FlaskForm):
+    """Criação de um grupo (Bloco 2)."""
+
+    nome = StringField(
+        "Nome do grupo",
+        validators=[
+            DataRequired("Dê um nome para o grupo."),
+            Length(max=60, message="Use no máximo 60 caracteres."),
+        ],
+    )
+
+
+class ConvidarMembroForm(FlaskForm):
+    """Convite por username — membro é usuário com conta, nunca Aluno."""
+
+    username = StringField(
+        "Usuário a convidar", validators=[DataRequired("Informe o usuário.")]
+    )

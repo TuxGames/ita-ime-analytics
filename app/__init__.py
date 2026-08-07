@@ -44,6 +44,7 @@ def create_app(config_class=Config) -> Flask:
     from .estudos.routes import estudos_bp
     from .oficiais.routes import oficiais_bp
     from .admin.routes import admin_bp
+    from .grupos.routes import grupos_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -52,6 +53,7 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(estudos_bp, url_prefix="/estudos")
     app.register_blueprint(oficiais_bp, url_prefix="/oficiais")
     app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(grupos_bp, url_prefix="/grupos")
 
     from .grouping import compor_titulo, rotulo_curto
 

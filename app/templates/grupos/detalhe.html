@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ grupo.nome }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ grupo.nome }}</h1>
+    <p class="page-sub">{{ dados_js.inicio }} a {{ dados_js.fim }}</p>
+  </div>
+</div>
+
+<nav class="filtro-turma" aria-label="Filtrar por período">
+  <a class="filtro-chip {{ 'filtro-ativo' if periodo == 'semana' else '' }}"
+     href="{{ url_for('grupos.detalhe', grupo_id=grupo.id, periodo='semana') }}"
+     {% if periodo == 'semana' %}aria-current="true"{% endif %}>Semana atual</a>
+  <a class="filtro-chip {{ 'filtro-ativo' if periodo == '30dias' else '' }}"
+     href="{{ url_for('grupos.detalhe', grupo_id=grupo.id, periodo='30dias') }}"
+     {% if periodo == '30dias' %}aria-current="true"{% endif %}>Últimos 30 dias</a>
+</nav>
+
+{% if not dados_js.membros %}
+<section class="card empty-state">
+  <h2>Só você por aqui</h2>
+  <p>Convide alguém para o grupo começar a mostrar alguma coisa.</p>
+</section>
+{% else %}
+
+<section class="card">
+  <h2 class="card-title">Evolução — questões por dia</h2>
+  <p class="card-sub">Uma linha por pessoa, só quem já aceitou o convite.</p>
+  <div class="chart-box"><canvas id="chart-grupo-questoes" role="img" aria-label="Gráfico de linhas com questões feitas por dia, uma linha por membro do grupo"></canvas></div>
+</section>
+
+<section class="card">
+  <div class="card-head-row">
+    <h2 class="card-title">Como cada um está no período</h2>
+  </div>
+  <p class="card-sub">Mesma consulta do gráfico acima — aqui é só o placar, não é o ponto principal da tela.</p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Pessoa</th><th>Questões</th><th>% acerto</th><th>Simulados</th></tr>
+      </thead>
+      <tbody>
+        {% for m in dados_js.placar %}
+        <tr>
+          <td>{{ m.username }}{% if m.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</td>
+          <td>{{ m.questoes_totais }}</td>
+          <td>{% if m.percentual_acerto is not none %}{{ "%.1f"|format(m.percentual_acerto) }}%{% else %}—{% endif %}</td>
+          <td>{{ m.simulados_feitos }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script type="application/json" id="grupo-evolucao-data">{{ dados_js|tojson }}</script>
+{% endif %}
+
+<section class="card">
+  <h2 class="card-title">Membros</h2>
+  <ul class="of-simples">
+    {% for m in membros %}
+    <li>
+      <span>
+        {{ m.user.username }}
+        {%- if m.grupo.criado_por == m.user_id %} <span class="serie-chip">dono</span>{% endif %}
+        {%- if m.status == "convidado" %} <span class="serie-chip">convite pendente</span>{% endif %}
+      </span>
+      {% if eh_dono and m.user_id != current_user.id %}
+      <form method="post" action="{{ url_for('grupos.remover_membro', grupo_id=grupo.id, membro_id=m.id) }}"
+            data-confirm="Remover {{ m.user.username }} do grupo?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="linklike">remover</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% if eh_dono %}
+<section class="card">
+  <h2 class="card-title">Convidar</h2>
+  <form method="post" action="{{ url_for('grupos.convidar', grupo_id=grupo.id) }}">
+    {{ convidar_form.hidden_tag() }}
+    <div class="form-group">
+      {{ convidar_form.username.label(class="form-label") }}
+      {{ convidar_form.username(class="input", placeholder="nome de usuário") }}
+      {% for e in convidar_form.username.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Convidar</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="form-actions">
+  {% if eh_dono %}
+  <form method="post" action="{{ url_for('grupos.apagar', grupo_id=grupo.id) }}"
+        data-confirm="Apagar o grupo &quot;{{ grupo.nome }}&quot;? Isso não apaga nenhum dado de estudo dos membros.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger btn-block">Apagar grupo</button>
+  </form>
+  {% else %}
+  <form method="post" action="{{ url_for('grupos.sair', grupo_id=grupo.id) }}"
+        data-confirm="Sair de &quot;{{ grupo.nome }}&quot;?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger btn-block">Sair do grupo</button>
+  </form>
+  {% endif %}
+  <a class="btn btn-ghost btn-block" href="{{ url_for('grupos.listar') }}">Voltar</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if dados_js.membros %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/grupo_evolucao.js') }}" defer></script>
+{% endif %}
+{% endblock %}

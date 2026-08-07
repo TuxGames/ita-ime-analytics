@@ -777,3 +777,57 @@ class HistoricoImport(db.Model):
 
     def __repr__(self):
         return f"<HistoricoImport {self.tipo} {self.alvo}>"
+
+
+class Grupo(db.Model):
+    """Um punhado de usuários que compartilham o quanto andaram estudando (Bloco 2).
+
+    Membro é USUÁRIO COM CONTA, nunca Aluno — grupo é sobre hábito de estudo
+    (RegistroEstudo/Simulado), que só existe para quem tem login. Apagar o
+    grupo apaga só a lista de membros; RegistroEstudo, Simulado e SessaoTreino
+    de ninguém são tocados (não há FK de volta deles para cá)."""
+
+    __tablename__ = "grupos"
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(60), nullable=False)
+    criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+    dono = db.relationship("User", foreign_keys=[criado_por])
+    membros = db.relationship(
+        "GrupoMembro", back_populates="grupo", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<Grupo {self.nome}>"
+
+
+class GrupoMembro(db.Model):
+    """O vínculo de UM usuário com UM grupo — com convite/aceite no meio.
+
+    Enquanto `status == "convidado"`, nada do usuário aparece nas agregações
+    do grupo (ver grupo_evolucao.membros_ativos): dado de hábito de estudo é
+    mais sensível que o ranking de simulado, que o colégio já publica. Sair
+    (`"saiu"`) tem o mesmo efeito de sumir das agregações, sem apagar o
+    histórico de ter sido convidado/participado."""
+
+    __tablename__ = "grupo_membros"
+    __table_args__ = (db.UniqueConstraint("grupo_id", "user_id"),)
+
+    STATUS = ("convidado", "ativo", "saiu")
+
+    id = db.Column(db.Integer, primary_key=True)
+    grupo_id = db.Column(
+        db.Integer, db.ForeignKey("grupos.id"), nullable=False, index=True
+    )
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    status = db.Column(db.String(20), nullable=False, default="convidado")
+    convidado_em = db.Column(db.DateTime, nullable=False, default=utcnow)
+    respondido_em = db.Column(db.DateTime, nullable=True)
+
+    grupo = db.relationship("Grupo", back_populates="membros")
+    user = db.relationship("User")
+
+    def __repr__(self):
+        return f"<GrupoMembro grupo={self.grupo_id} user={self.user_id} {self.status}>"
