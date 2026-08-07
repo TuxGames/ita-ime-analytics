@@ -1,8 +1,10 @@
+import json
 import os
 from datetime import date
 
 from flask import (
     Blueprint,
+    Response,
     abort,
     current_app,
     flash,
@@ -18,12 +20,14 @@ from ..extensions import db
 from ..forms import ImportOficialForm
 from ..models import (
     TURMA_CURTO,
+    HistoricoImport,
     ResultadoLinha,
     ResultadoOficial,
     normalizar_nome,
     turma_valida,
     utcnow,
 )
+from ..exportacao import exportar_resultado_oficial
 from ..oficiais_import import ErroImport, aplicar, parse
 from ..validacao import (
     _texto,
@@ -100,6 +104,25 @@ def detalhe(resultado_id):
     )
 
 
+@oficiais_bp.route("/<int:resultado_id>/exportar")
+@admin_required
+def exportar(resultado_id):
+    """Exporta uma turma do listão no MESMO formato que o importador aceita
+    (Fase F.2) — exportar e reimportar é ida e volta sem perda."""
+    resultado = db.session.get(ResultadoOficial, resultado_id)
+    if resultado is None:
+        abort(404)
+    turma = turma_valida(request.args.get("turma"))
+    if turma is None:
+        abort(404)
+    dados = exportar_resultado_oficial(resultado, turma)
+    corpo = json.dumps(dados, ensure_ascii=False, indent=2)
+    resposta = Response(corpo, mimetype="application/json")
+    nome = f"{resultado.concurso_nome}-{turma}".replace(" ", "-").replace("/", "-")
+    resposta.headers["Content-Disposition"] = f'attachment; filename="{nome}.json"'
+    return resposta
+
+
 @oficiais_bp.route("/importar", methods=["GET", "POST"])
 @admin_required
 def importar():
@@ -124,6 +147,14 @@ def importar():
                     db.session.rollback()
                     form.payload.errors.append(str(exc))
                 else:
+                    db.session.add(
+                        HistoricoImport(
+                            tipo="oficial",
+                            alvo=f"{dados['concurso']} - {dados['turma']}",
+                            created_by=current_user.id,
+                            payload_json=form.payload.data,
+                        )
+                    )
                     db.session.flush()
                     vinculadas = revincular()
                     db.session.commit()

@@ -74,6 +74,15 @@
 </nav>
 {% endif %}
 
+{% if current_user.is_admin %}
+<p class="card-sub">
+  Exportar (no formato que a importação aceita):
+  {% for turma in turmas %}
+  <a href="{{ url_for('simulados.turma_exportar', turma_id=t.id, turma=turma) }}">{{ TURMA_CURTO[turma] }}</a>{% if not loop.last %} ·{% endif %}
+  {% endfor %}
+</p>
+{% endif %}
+
 {% if minha_linha %}
 <section class="card meu-lugar">
   <div class="meu-lugar-num">

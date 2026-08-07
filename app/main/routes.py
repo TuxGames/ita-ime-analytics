@@ -6,6 +6,7 @@ from flask import Blueprint, Response, flash, redirect, render_template, request
 from flask_login import current_user, login_required
 
 from ..evolucao import evolucao_do_aluno
+from ..exportacao import exportar_dados_usuario
 from ..extensions import db
 from ..forms import MateriasPerfilForm, NomeOficialForm
 from ..models import (
@@ -281,3 +282,17 @@ def evolucao():
         dados_js=dados,
         voltar_url=url_for("main.dashboard"),
     )
+
+
+@main_bp.route("/meus-dados")
+@login_required
+def baixar_meus_dados():
+    """"Baixar meus dados" (Fase F.2): simulados, registros de estudo e as
+    linhas em que o usuário aparece, num JSON só para leitura."""
+    dados = exportar_dados_usuario(current_user)
+    corpo = json.dumps(dados, ensure_ascii=False, indent=2)
+    resposta = Response(corpo, mimetype="application/json")
+    resposta.headers["Content-Disposition"] = (
+        f'attachment; filename="itaime-{current_user.username}.json"'
+    )
+    return resposta

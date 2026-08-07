@@ -1,7 +1,9 @@
+import json
 import os
 
 from flask import (
     Blueprint,
+    Response,
     abort,
     current_app,
     flash,
@@ -14,12 +16,14 @@ from flask_login import current_user, login_required
 
 from ..conferencia import relatorio, tem_alerta
 from ..decorators import admin_required
+from ..exportacao import exportar_simulado_turma
 from ..extensions import db
 from ..forms import ImportSimuladoTurmaForm, SimuladoForm
 from ..grouping import agrupar, rotulo_curto
 from ..models import (
     TURMA_CURTO,
     Concurso,
+    HistoricoImport,
     Materia,
     Simulado,
     SimuladoMateria,
@@ -384,6 +388,14 @@ def turma_importar():
                     db.session.rollback()
                     form.payload.errors.append(str(exc))
                 else:
+                    db.session.add(
+                        HistoricoImport(
+                            tipo="simulado",
+                            alvo=f"{simulado.nome} - {dados['data']} - {dados['turma']}",
+                            created_by=current_user.id,
+                            payload_json=form.payload.data,
+                        )
+                    )
                     db.session.flush()
                     vinculadas = revincular()
                     db.session.commit()
@@ -496,6 +508,23 @@ def turma_detalhe(turma_id):
             db.select(Concurso).order_by(Concurso.data_prova)
         ).all(),
     )
+
+
+@simulados_bp.route("/turma/<int:turma_id>/exportar")
+@admin_required
+def turma_exportar(turma_id):
+    """Exporta uma turma do ranking no MESMO formato que o importador aceita
+    (Fase F.2) — exportar e reimportar é ida e volta sem perda."""
+    turma = _get_turma(turma_id)
+    alvo = turma_valida(request.args.get("turma"))
+    if alvo is None:
+        abort(404)
+    dados = exportar_simulado_turma(turma, alvo)
+    corpo = json.dumps(dados, ensure_ascii=False, indent=2)
+    resposta = Response(corpo, mimetype="application/json")
+    nome = f"{turma.banca}-{turma.rotulo}-{alvo}".replace(" ", "-").replace("/", "-")
+    resposta.headers["Content-Disposition"] = f'attachment; filename="{nome}.json"'
+    return resposta
 
 
 @simulados_bp.post("/turma/<int:turma_id>/excluir")

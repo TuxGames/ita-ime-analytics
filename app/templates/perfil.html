@@ -66,6 +66,7 @@
 
 <div class="form-actions">
   <a class="btn btn-outline btn-block" href="{{ url_for('main.evolucao') }}">Minha evolução</a>
+  <a class="btn btn-outline btn-block" href="{{ url_for('main.baixar_meus_dados') }}">Baixar meus dados</a>
   {% if current_user.is_admin %}
   <a class="btn btn-outline btn-block" href="{{ url_for('admin.turmas') }}">Turmas e alunos (admin)</a>
   {% endif %}

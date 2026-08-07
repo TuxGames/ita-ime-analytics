@@ -101,6 +101,15 @@
 </nav>
 {% endif %}
 
+{% if current_user.is_admin %}
+<p class="card-sub">
+  Exportar (no formato que a importação aceita):
+  {% for t in turmas %}
+  <a href="{{ url_for('oficiais.exportar', resultado_id=r.id, turma=t) }}">{{ TURMA_CURTO[t] }}</a>{% if not loop.last %} ·{% endif %}
+  {% endfor %}
+</p>
+{% endif %}
+
 <section class="card">
   <div class="stats-grid stats-3">
     <div class="stat">
