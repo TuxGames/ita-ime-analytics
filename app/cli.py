@@ -1,8 +1,12 @@
 """Comandos CLI: criação de contas é só por aqui (não há cadastro self-service)."""
+import os
 import re
 import secrets
+import sqlite3
+from datetime import datetime
 
 import click
+from flask import current_app
 
 from .extensions import db
 from .models import Concurso, Simulado, User
@@ -14,12 +18,59 @@ def _gerar_senha_temporaria() -> str:
     return secrets.token_urlsafe(12)
 
 
+def _caminho_sqlite(uri: str) -> str | None:
+    """Extrai o caminho do arquivo de uma URI sqlite:///... . None se não for
+    SQLite em arquivo (ex.: "sqlite://" em memória, ou outro banco)."""
+    prefixo = "sqlite:///"
+    if not uri.startswith(prefixo):
+        return None
+    return uri[len(prefixo):] or None
+
+
 def _fase_base(etapa: str) -> str:
     """'2ª Fase, dia 3' -> '2ª Fase'. 'Dia 1' e '1ª Fase' (sem ', dia') ficam iguais."""
     return etapa.split(", dia")[0].strip() if ", dia" in etapa else etapa
 
 
 def register_cli(app):
+    @app.cli.command("backup")
+    @click.option(
+        "--para",
+        "destino",
+        default=None,
+        help="Pasta de destino do backup (padrão: instance/backups).",
+    )
+    def backup(destino):
+        """Cópia consistente do banco SQLite, via VACUUM INTO.
+
+        VACUUM INTO (e não cp/shutil.copy) porque copiar o arquivo aberto sob
+        escrita concorrente pode pegar o banco no meio de uma transação e
+        corromper o backup; VACUUM INTO faz a cópia dentro do próprio SQLite,
+        de forma consistente."""
+        uri = current_app.config["SQLALCHEMY_DATABASE_URI"]
+        caminho_origem = _caminho_sqlite(uri)
+        if caminho_origem is None:
+            raise click.ClickException(
+                "Backup só funciona com banco SQLite em arquivo "
+                f"(SQLALCHEMY_DATABASE_URI atual: {uri!r})."
+            )
+        if not os.path.exists(caminho_origem):
+            raise click.ClickException(f"Banco não encontrado em '{caminho_origem}'.")
+
+        pasta = destino or os.path.join(os.path.dirname(caminho_origem) or ".", "backups")
+        os.makedirs(pasta, exist_ok=True)
+        nome = f"itaime-{datetime.now().strftime('%Y%m%d-%H%M%S')}.db"
+        caminho_destino = os.path.join(pasta, nome)
+
+        conexao = sqlite3.connect(caminho_origem)
+        try:
+            conexao.execute("VACUUM INTO ?", (caminho_destino,))
+        finally:
+            conexao.close()
+
+        tamanho_kb = os.path.getsize(caminho_destino) / 1024
+        click.echo(f"Backup criado: {caminho_destino} ({tamanho_kb:.1f} KB)")
+
     @app.cli.command("consolidar-fases")
     @click.option("--yes", is_flag=True, help="Aplica de fato (sem isso, só mostra o plano).")
     def consolidar_fases(yes):

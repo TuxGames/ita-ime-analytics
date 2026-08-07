@@ -731,3 +731,31 @@ class SessaoTreino(db.Model):
     @property
     def tempo_medio_seg(self) -> float:
         return self.tempo_total_seg / self.questoes if self.questoes else 0.0
+
+
+class HistoricoImport(db.Model):
+    """Um registro por import APLICADO (Fase F.3) — oficial ou de simulado.
+
+    Guarda o JSON cru submetido: se um import saiu errado, o admin ainda tem
+    o que foi colado originalmente para comparar/reprocessar manualmente. Não
+    existe rollback automático a partir daqui — é só o registro do que
+    aconteceu, para auditoria e depuração."""
+
+    __tablename__ = "historico_imports"
+
+    TIPOS = ("oficial", "simulado")
+
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(20), nullable=False)
+    # Identificação do alvo, só para leitura humana na lista (ex.: "AFA 2027 -
+    # novata" ou "ITA S3 - 2026-04-11 - veterana"). Não é FK de propósito: o
+    # concurso/prova pode ser excluído depois e o histórico continua legível.
+    alvo = db.Column(db.String(160), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    payload_json = db.Column(db.Text, nullable=False)
+
+    criador = db.relationship("User")
+
+    def __repr__(self):
+        return f"<HistoricoImport {self.tipo} {self.alvo}>"

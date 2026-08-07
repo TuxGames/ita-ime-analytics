@@ -1,7 +1,8 @@
 import calendar as _calendar
+import json
 from datetime import date
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from ..evolucao import evolucao_do_aluno
