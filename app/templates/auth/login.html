@@ -9,6 +9,20 @@
     <p class="auth-sub">Analytics de simulados</p>
   </div>
   <div class="card auth-card">
+    {% if ja_logado %}
+    <h1 class="card-title">Você já está logado</h1>
+    <p class="flash flash-info">
+      Esta sessão é de <strong>{{ current_user.username }}</strong>.
+      Para entrar com outra conta, saia desta primeiro.
+    </p>
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger btn-block">Sair da conta de {{ current_user.username }}</button>
+    </form>
+    <p class="auth-note">
+      Não é você? <a href="{{ url_for('main.dashboard') }}">Ir para o painel de {{ current_user.username }}</a>
+    </p>
+    {% else %}
     <h1 class="card-title">Entrar</h1>
     <form method="post" novalidate>
       {{ form.hidden_tag() }}
@@ -17,6 +31,7 @@
       <button type="submit" class="btn btn-primary btn-block">Entrar</button>
     </form>
     <p class="auth-note">Ainda não tem conta? <a href="{{ url_for('auth.register') }}">Criar conta</a></p>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

@@ -11,6 +11,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required, login_user, logout_user
+from flask_wtf.csrf import CSRFError
 
 import re
 
@@ -55,6 +56,21 @@ def force_password_change():
             return redirect(url_for("auth.change_password"))
 
 
+@auth_bp.app_errorhandler(CSRFError)
+def csrf_invalido(erro):
+    """No /login de quem já tem sessão ativa, o CSRF vencido virava um 400 seco.
+
+    Era a outra metade do mesmo bug: como o GET /login redirecionava para o
+    dashboard, o token nunca chegava a ser emitido, e o POST vindo de uma aba
+    antiga morria em 400 sem dizer o motivo. Agora esse caso cai na mesma tela
+    de aviso do login, que explica quem está logado. Qualquer outro CSRF
+    inválido segue com o 400 padrão de sempre.
+    """
+    if current_user.is_authenticated and request.endpoint == "auth.login":
+        return render_template("auth/login.html", form=None, ja_logado=True)
+    return erro.get_response()
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit(
     "5 per 15 minutes",
@@ -62,8 +78,13 @@ def force_password_change():
     error_message="Muitas tentativas de login. Tente novamente em 15 minutos.",
 )
 def login():
+    # Trocar de conta exige logout explícito. O que esta view NÃO faz mais é o
+    # redirect calado para o dashboard: quem chegava aqui com sessão ativa era
+    # jogado no dashboard do usuário anterior sem nenhum aviso, achando que
+    # tinha entrado na própria conta. Daí o "403 misterioso" nas rotas de admin
+    # — era a autorização do usuário anterior funcionando certo.
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return render_template("auth/login.html", form=None, ja_logado=True)
 
     form = LoginForm()
     if form.validate_on_submit():
@@ -88,7 +109,7 @@ def login():
         )
         flash("Usuário ou senha inválidos.", "error")
 
-    return render_template("auth/login.html", form=form)
+    return render_template("auth/login.html", form=form, ja_logado=False)
 
 
 @auth_bp.route("/registrar", methods=["GET", "POST"])

@@ -10,6 +10,7 @@ import sys
 from datetime import date
 
 import pytest
+from flask import g
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -36,6 +37,29 @@ def app():
     aplicativo = create_app(ConfigTeste)
     # "strong" invalida a sessão forjada pelo test_client.
     login_manager.session_protection = None
+
+    def _descartar_usuario_cacheado():
+        """Faz o `g` se comportar como em produção: um por requisição.
+
+        Em produção cada requisição empurra um app context novo, e com ele um
+        `g` novo. Aqui o `app_context()` abaixo dura o teste inteiro, e o
+        RequestContext.push() do Flask REAPROVEITA o app context já empilhado
+        (flask/ctx.py) — então o `g` sobrevive de uma requisição para a outra.
+        O Flask-Login guarda o usuário resolvido em `g._login_user` e só
+        recarrega da sessão quando a chave não existe (flask_login/utils.py:369).
+        Resultado: trocar de usuário no meio de um teste não tinha efeito — a
+        segunda requisição continuava com a identidade da primeira, e rotas de
+        admin devolviam 403 com a sessão apontando para o admin. Isso é artefato
+        do fixture, não do app: no HTTP real a troca de conta funciona.
+        """
+        g.pop("_login_user", None)
+
+    # Precisa rodar ANTES do force_password_change (registrado pelo blueprint de
+    # auth dentro do create_app), que também lê current_user.
+    aplicativo.before_request_funcs.setdefault(None, []).insert(
+        0, _descartar_usuario_cacheado
+    )
+
     with aplicativo.app_context():
         _db.create_all()
         yield aplicativo
