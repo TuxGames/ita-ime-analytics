@@ -34,7 +34,7 @@ from ..models import (
     utcnow,
 )
 from ..oficiais_import import ErroImport, materias_da_query
-from ..simulado_sync import concursos_por_banca, linhas_pendentes, sincronizar_linha, sugerir_concurso
+from ..simulado_sync import linhas_pendentes, opcoes_de_concurso, sincronizar_linha
 from ..simulado_turma_import import aplicar as aplicar_turma
 from ..simulado_turma_import import parse as parse_turma
 from ..validacao import (
@@ -251,7 +251,6 @@ def sincronizar():
     GET mostra o preview (linhas pendentes + concurso sugerido, editável por
     linha). POST grava o que foi confirmado; linha sem concurso escolhido ou
     já sincronizada fica de fora, sem travar as demais."""
-    mapa_bancas = concursos_por_banca()
     pendentes = linhas_pendentes(current_user.id)
 
     if request.method == "POST":
@@ -278,15 +277,21 @@ def sincronizar():
             flash("Nada para sincronizar — nenhuma linha com concurso escolhido.", "info")
         return redirect(url_for("simulados.listar"))
 
-    itens = [
-        {"linha": linha, "sugestao": sugerir_concurso(linha, mapa_bancas)}
-        for linha in pendentes
-    ]
-    return render_template(
-        "simulados/sincronizar.html",
-        itens=itens,
-        concursos=_concursos_ordenados(),
-    )
+    # Mesma regra do "Trazer" individual: banca + fase decidem a sugestão, e o
+    # que não é compatível continua na lista, no segundo optgroup.
+    concursos = _concursos_ordenados()
+    itens = []
+    for linha in pendentes:
+        compativeis, outros, sugestao = opcoes_de_concurso(linha.turma_obj, concursos)
+        itens.append(
+            {
+                "linha": linha,
+                "sugestao": sugestao,
+                "compativeis": compativeis,
+                "outros": outros,
+            }
+        )
+    return render_template("simulados/sincronizar.html", itens=itens)
 
 
 # --------------------------------------------------------------------------
@@ -493,6 +498,10 @@ def turma_detalhe(turma_id):
         ],
     }
 
+    # O <select> "Conta para qual concurso" abre no concurso da mesma banca e
+    # fase do ranking; os demais continuam acessíveis no segundo optgroup.
+    compativeis, outros, sugestao = opcoes_de_concurso(turma, _concursos_ordenados())
+
     return render_template(
         "simulados/turma_detalhe.html",
         t=turma,
@@ -505,9 +514,9 @@ def turma_detalhe(turma_id):
         filtro=filtro,
         turmas=turma.turmas_presentes,
         TURMA_CURTO=TURMA_CURTO,
-        concursos=db.session.scalars(
-            db.select(Concurso).order_by(Concurso.data_prova)
-        ).all(),
+        concursos_compativeis=compativeis,
+        concursos_outros=outros,
+        concurso_sugerido=sugestao,
     )
 
 

@@ -32,6 +32,57 @@ def rotulo_curto(nome: str) -> str:
     return partes[1].strip() if len(partes) == 2 else nome
 
 
+# Fase do ranking (SimuladoTurma.fase) → como a etapa aparece no nome do
+# concurso. "objetiva" é a 1ª fase; "discursiva", a 2ª. Comparado normalizado,
+# então "1ª Fase", "1a fase" e "1ª FASE" contam como a mesma coisa.
+FASE_ETAPA = {"objetiva": "1A FASE", "discursiva": "2A FASE"}
+
+
+def etapa_casa_fase(etapa: str, fase: str | None) -> bool:
+    """A etapa do concurso corresponde à fase do ranking?
+
+    Compara por prefixo para "2ª Fase, dia 1" continuar casando com a
+    discursiva. Etapa vazia ("AFA") e etapa de dia ("Dia 1", "Dia 2") nunca
+    casam: essas bancas não têm noção de 1ª/2ª fase, e aí quem decide é o
+    filtro por banca."""
+    from .models import normalizar_nome
+
+    alvo = FASE_ETAPA.get(fase or "")
+    if not alvo or not etapa:
+        return False
+    return normalizar_nome(etapa).startswith(alvo)
+
+
+def casar_concurso(concursos, banca: str, fase: str | None = None):
+    """Devolve `(compativeis, sugestao)` para um ranking de turma.
+
+    - `compativeis`: os concursos da mesma banca do ranking, na ordem recebida.
+      Vem vazio quando nenhum concurso é dessa banca — aí a tela mostra a lista
+      inteira, como antes.
+    - `sugestao`: o concurso a pré-selecionar, ou None quando continua ambíguo.
+
+    A fase desempata dentro da banca: com vários concursos da mesma banca
+    (o caso de produção — "IME - 1ª Fase" e "IME - 2ª Fase"), só é sugerido o
+    que tiver a etapa correspondente, e só se for um único. Sem isso o
+    `<select>` vinha com o primeiro concurso da lista, que quase nunca é o
+    certo, e um toque distraído arquivava o simulado no concurso errado."""
+    alvo = banca_curta(banca or "")
+    if not alvo:
+        return [], None
+    por_banca = [c for c in concursos if banca_curta(c.nome) == alvo]
+    if not por_banca:
+        return [], None
+
+    por_fase = [c for c in por_banca if etapa_casa_fase(c.etapa, fase)]
+    if len(por_fase) == 1:
+        return por_banca, por_fase[0]
+    # Banca com um concurso só continua resolvendo sozinha (comportamento do
+    # Bloco 1); mais de um sem fase que desempate fica para escolha manual.
+    if len(por_banca) == 1:
+        return por_banca, por_banca[0]
+    return por_banca, None
+
+
 def compor_titulo(banca_texto: str, rotulo: str | None, fase: str | None = None) -> str:
     """"ITA S5 · 1ª fase" — banca curta + rótulo + fase, cada pedaço opcional.
 

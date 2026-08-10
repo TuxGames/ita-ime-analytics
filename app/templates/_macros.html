@@ -6,6 +6,30 @@
 </div>
 {% endmacro %}
 
+{# <select> de concurso com os compatíveis (mesma banca/fase do ranking) em
+   cima e os demais logo abaixo. Filtrar não esconde nada: os dois optgroups
+   juntos são a lista inteira, e continua sendo um <select> nativo. #}
+{% macro select_concurso(nome, compativeis, outros, sugestao, vazio=None, obrigatorio=False) %}
+<select class="input" id="{{ nome }}" name="{{ nome }}" {% if obrigatorio %}required{% endif %}>
+  {% if vazio %}<option value="">{{ vazio }}</option>{% endif %}
+  {% if compativeis %}
+  <optgroup label="Compatíveis">
+    {% for c in compativeis %}
+    <option value="{{ c.id }}"{% if sugestao and sugestao.id == c.id %} selected{% endif %}>{{ c.nome }}</option>
+    {% endfor %}
+  </optgroup>
+  {% if outros %}
+  <optgroup label="Outros concursos">
+    {% for c in outros %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}
+  </optgroup>
+  {% endif %}
+  {% else %}
+  {# Nenhum concurso da banca do ranking: lista cheia, sem agrupar. #}
+  {% for c in outros %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}
+  {% endif %}
+</select>
+{% endmacro %}
+
 {% macro nav_icon(name) %}
   {% if name == "dashboard" %}
   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>

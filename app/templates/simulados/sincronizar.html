@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import select_concurso %}
 {% block title %}Sincronizar simulados — ITA-IME Analytics{% endblock %}
 
 {% block content %}
@@ -33,12 +34,8 @@
             {{ titulo_simulado(t.banca, t.rotulo, t.fase) }} — {{ t.data.strftime("%d/%m/%Y") }}
             {%- if not item.sugestao %} <span class="serie-chip">escolha o concurso</span>{% endif %}
           </label>
-          <select class="input" name="concurso_{{ ln.id }}">
-            <option value="">— não sincronizar esta —</option>
-            {% for c in concursos %}
-            <option value="{{ c.id }}" {% if item.sugestao and item.sugestao.id == c.id %}selected{% endif %}>{{ c.nome }}</option>
-            {% endfor %}
-          </select>
+          {{ select_concurso("concurso_" ~ ln.id, item.compativeis, item.outros,
+                             item.sugestao, vazio="— não sincronizar esta —") }}
         </div>
       </li>
       {% endfor %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import select_concurso %}
 {% block title %}{{ t.nome }} — ITA-IME Analytics{% endblock %}
 
 {% macro editar_linha(ln) %}
@@ -206,9 +207,12 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label class="form-label" for="concurso_id">Conta para qual concurso</label>
-      <select class="input" id="concurso_id" name="concurso_id" required>
-        {% for c in concursos %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}
-      </select>
+      {# Sem sugestão (banca sem fase que desempate, ex.: EFOMM Dia 1/Dia 2) o
+         select abre vazio: melhor obrigar a escolha do que arquivar no errado. #}
+      {{ select_concurso("concurso_id", concursos_compativeis, concursos_outros,
+                         concurso_sugerido,
+                         vazio=None if concurso_sugerido else "— escolha o concurso —",
+                         obrigatorio=True) }}
     </div>
     <button type="submit" class="btn btn-primary btn-block">
       {% if meu_simulado %}Atualizar meu {{ t.rotulo }}{% else %}Trazer {{ t.rotulo }}{% endif %}

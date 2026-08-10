@@ -14,7 +14,7 @@ Nada aqui dá commit: quem comita é a rota, como no resto do projeto.
 """
 
 from .extensions import db
-from .grouping import banca_curta
+from .grouping import banca_curta, casar_concurso
 from .models import Concurso, Simulado, SimuladoMateria, SimuladoTurma, SimuladoTurmaLinha
 
 
@@ -55,14 +55,26 @@ def concursos_por_banca() -> dict:
 
 
 def sugerir_concurso(linha: "SimuladoTurmaLinha", mapa_bancas: dict) -> "Concurso | None":
-    """Concurso sugerido para a linha: só quando a banca casa com UM só concurso.
+    """Concurso sugerido para a linha, ou None quando continua ambíguo.
 
-    Duas ou mais fases da mesma banca (ex.: ITA 1ª/2ª fase) são ambíguas — fica
-    pendente de escolha manual, como o C.3 do plano pede."""
-    candidatos = mapa_bancas.get(banca_curta(linha.turma_obj.banca))
-    if candidatos and len(candidatos) == 1:
-        return candidatos[0]
-    return None
+    Banca com um concurso só resolve direto; com mais de um, a fase do ranking
+    desempata (objetiva → 1ª fase, discursiva → 2ª). A regra mora em
+    `casar_concurso` para esta tela e a de detalhe do ranking não divergirem."""
+    turma = linha.turma_obj
+    candidatos = mapa_bancas.get(banca_curta(turma.banca)) or []
+    return casar_concurso(candidatos, turma.banca, turma.fase)[1]
+
+
+def opcoes_de_concurso(turma: "SimuladoTurma", concursos: list) -> tuple:
+    """`(compativeis, outros, sugestao)` para montar o `<select>` de concurso.
+
+    Os dois grupos juntos são sempre a lista completa: filtrar não pode impedir
+    a pessoa de escolher outro concurso, só empurrar o provável para cima.
+    `compativeis` vazio significa nenhuma correspondência de banca — a tela
+    mostra a lista inteira, sem agrupar."""
+    compativeis, sugestao = casar_concurso(concursos, turma.banca, turma.fase)
+    ids = {c.id for c in compativeis}
+    return compativeis, [c for c in concursos if c.id not in ids], sugestao
 
 
 def sincronizar_linha(linha: "SimuladoTurmaLinha", concurso: "Concurso", user_id: int):
