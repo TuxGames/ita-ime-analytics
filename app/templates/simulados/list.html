@@ -2,24 +2,21 @@
 {% block title %}Simulados — ITA-IME Analytics{% endblock %}
 
 {% block content %}
-<div class="page-head">
-  <h1>Meus simulados</h1>
-  <div>
-    <a class="btn btn-outline btn-sm show-desktop" href="{{ url_for('simulados.sincronizar') }}">Sincronizar</a>
-    <a class="btn btn-primary btn-sm show-desktop" href="{{ url_for('simulados.novo') }}">+ Novo simulado</a>
+<section class="board" aria-label="Simulados">
+  <div class="board-top">
+    <div>
+      <h1 class="board-title">Simulados</h1>
+      <p class="board-sub">Três recortes do mesmo assunto — escolha de quem é a nota.</p>
+    </div>
+    <a class="board-avatar" href="{{ url_for('main.perfil') }}" aria-label="Seu perfil">{{ current_user.username[0]|upper }}</a>
   </div>
-</div>
-
-<a class="card treino-link" href="{{ url_for('simulados.turma_listar') }}">
-  <div class="treino-link-icon" aria-hidden="true">
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-  </div>
-  <div class="treino-link-text">
-    <p class="treino-link-title">Ranking da turma</p>
-    <p class="treino-link-sub">Sua posição no mesmo simulado, com as matérias que você escolher</p>
-  </div>
-  <span class="treino-link-arrow" aria-hidden="true">›</span>
-</a>
+  <nav class="seg" aria-label="Recorte dos resultados">
+    <a href="{{ url_for('simulados.listar') }}" aria-current="page">Meus</a>
+    <a href="{{ url_for('simulados.turma_listar') }}">Turma</a>
+    <a href="{{ url_for('oficiais.index') }}">Oficiais</a>
+  </nav>
+  <p class="seg-explica">Meus — o que você digitou ou importou. Ninguém mais vê.</p>
+</section>
 
 {% if not simulados %}
 <section class="card empty-state">
@@ -33,15 +30,16 @@
 {# Mobile: cards #}
 <ul class="cards-list hide-desktop">
   {% for s in simulados %}
+  {% set piorm = (s.materias|sort(attribute="percentual"))[0] if s.materias else none %}
   <li>
     <a class="card sim-card" href="{{ url_for('simulados.detalhe', simulado_id=s.id) }}">
       <div class="sim-card-top">
         <div>
-          <p class="sim-date">
-            <span class="badge-rotulo">{{ s.titulo_curto }}</span>
+          <p class="sim-date">{{ s.titulo_curto }} · {{ s.concurso.nome }}</p>
+          <p class="sim-concurso">
             {{ s.data_simulado.strftime("%d/%m/%Y") }}
+            {% if s.origem == "import" %}<span class="serie-chip">importado</span>{% endif %}
           </p>
-          <p class="sim-concurso">{{ s.concurso.nome }}</p>
         </div>
         <div class="sim-nota">
           <p class="sim-nota-value">{{ "%.1f"|format(s.nota_geral) }}</p>
@@ -49,9 +47,9 @@
         </div>
       </div>
       {% if s.materias %}
-      <div class="chips">
+      <div class="sim-mats">
         {% for m in s.materias %}
-        <span class="chip">{{ m.materia.value[:3] }} {{ m.acertos }}/{{ m.total_questoes }}</span>
+        <span class="sim-mat {{ 'sim-mat-fraca' if piorm and m.materia == piorm.materia }}">{{ m.materia.value[:3] }} {{ m.acertos }}</span>
         {% endfor %}
       </div>
       {% endif %}
@@ -92,7 +90,7 @@
 </div>
 {% endif %}
 
-<a class="fab hide-desktop" href="{{ url_for('simulados.novo') }}" aria-label="Registrar novo simulado">
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-</a>
+<div class="form-actions">
+  <a class="btn btn-outline btn-block" href="{{ url_for('simulados.sincronizar') }}">Sincronizar com o ranking da turma</a>
+</div>
 {% endblock %}

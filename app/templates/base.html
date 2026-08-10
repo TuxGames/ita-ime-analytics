@@ -3,24 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1D3557">
+  <meta name="theme-color" content="#0C1B2E">
   <title>{% block title %}ITA-IME Analytics{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/placar.css') }}">
 </head>
 <body>
 {% from "_macros.html" import nav_icon %}
 {% set ep = request.endpoint or "" %}
+{# Simulados agrega os três recortes do mesmo assunto: meus, turma e oficiais. #}
+{% set em_simulados = ep.startswith("simulados.") or ep.startswith("oficiais.") %}
+{% set em_perfil = ep == "main.perfil" or ep.startswith("concursos.") or ep.startswith("grupos.") or ep.startswith("admin.") or ep == "main.evolucao" %}
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="{{ url_for('main.dashboard') }}">ITA·IME <span>Analytics</span></a>
     {% if current_user.is_authenticated %}
     <nav class="topnav" aria-label="Navegação principal">
-      <a href="{{ url_for('main.dashboard') }}" {% if ep == "main.dashboard" %}aria-current="page"{% endif %}>Dashboard</a>
-      <a href="{{ url_for('simulados.listar') }}" {% if ep.startswith("simulados.") %}aria-current="page"{% endif %}>Simulados</a>
+      <a href="{{ url_for('main.dashboard') }}" {% if ep == "main.dashboard" %}aria-current="page"{% endif %}>Início</a>
+      <a href="{{ url_for('simulados.listar') }}" {% if em_simulados %}aria-current="page"{% endif %}>Simulados</a>
       <a href="{{ url_for('estudos.index') }}" {% if ep.startswith("estudos.") %}aria-current="page"{% endif %}>Estudos</a>
-      <a href="{{ url_for('oficiais.index') }}" {% if ep.startswith("oficiais.") %}aria-current="page"{% endif %}>Oficiais</a>
-      <a href="{{ url_for('concursos.listar') }}" {% if ep.startswith("concursos.") %}aria-current="page"{% endif %}>Concursos</a>
-      <a href="{{ url_for('main.perfil') }}" {% if ep == "main.perfil" %}aria-current="page"{% endif %}>Perfil</a>
+      <a href="{{ url_for('main.perfil') }}" {% if em_perfil %}aria-current="page"{% endif %}>Perfil</a>
+      <a href="{{ url_for('simulados.novo') }}" class="btn btn-primary btn-sm">+ Simulado</a>
     </nav>
     {% endif %}
   </div>
@@ -42,21 +45,20 @@
 {% if current_user.is_authenticated %}
 <nav class="bottomnav" aria-label="Navegação principal">
   <a href="{{ url_for('main.dashboard') }}" class="bottomnav-item" {% if ep == "main.dashboard" %}aria-current="page"{% endif %}>
-    {{ nav_icon("dashboard") }}<span>Dashboard</span>
+    {{ nav_icon("dashboard") }}<span>Início</span>
   </a>
-  <a href="{{ url_for('simulados.listar') }}" class="bottomnav-item" {% if ep.startswith("simulados.") %}aria-current="page"{% endif %}>
+  <a href="{{ url_for('simulados.listar') }}" class="bottomnav-item" {% if em_simulados %}aria-current="page"{% endif %}>
     {{ nav_icon("simulados") }}<span>Simulados</span>
   </a>
+  <div class="bottomnav-slot">
+    <a class="nav-fab" href="{{ url_for('simulados.novo') }}" aria-label="Registrar novo simulado">
+      <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </a>
+  </div>
   <a href="{{ url_for('estudos.index') }}" class="bottomnav-item" {% if ep.startswith("estudos.") %}aria-current="page"{% endif %}>
     {{ nav_icon("estudos") }}<span>Estudos</span>
   </a>
-  <a href="{{ url_for('oficiais.index') }}" class="bottomnav-item" {% if ep.startswith("oficiais.") %}aria-current="page"{% endif %}>
-    {{ nav_icon("oficiais") }}<span>Oficiais</span>
-  </a>
-  <a href="{{ url_for('concursos.listar') }}" class="bottomnav-item" {% if ep.startswith("concursos.") %}aria-current="page"{% endif %}>
-    {{ nav_icon("concursos") }}<span>Concursos</span>
-  </a>
-  <a href="{{ url_for('main.perfil') }}" class="bottomnav-item" {% if ep == "main.perfil" %}aria-current="page"{% endif %}>
+  <a href="{{ url_for('main.perfil') }}" class="bottomnav-item" {% if em_perfil %}aria-current="page"{% endif %}>
     {{ nav_icon("perfil") }}<span>Perfil</span>
   </a>
 </nav>

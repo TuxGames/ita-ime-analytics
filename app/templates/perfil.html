@@ -2,24 +2,20 @@
 {% block title %}Perfil — ITA-IME Analytics{% endblock %}
 
 {% block content %}
-<div class="page-head">
-  <h1>Perfil</h1>
-</div>
-
-<section class="card perfil-card">
-  <div class="avatar" aria-hidden="true">{{ current_user.username[0]|upper }}</div>
-  <div>
-    <p class="perfil-nome">{{ current_user.username }}
-      {% if current_user.is_admin %}<span class="badge-admin">admin</span>{% endif %}
-    </p>
-    <p class="perfil-meta">No grupo desde {{ current_user.created_at.strftime("%d/%m/%Y") }}</p>
-    <p class="perfil-meta">{{ total_simulados }} simulado(s) registrado(s)</p>
-    {% if total_oficiais %}
-    <p class="perfil-meta">{{ total_oficiais }} resultado(s) oficial(is) vinculado(s)</p>
-    {% endif %}
-    {% if total_rankings %}
-    <p class="perfil-meta">{{ total_rankings }} ranking(s) de simulado vinculado(s)</p>
-    {% endif %}
+<section class="board" aria-label="Perfil">
+  <div class="perfil-board">
+    <div class="perfil-avatar-big" aria-hidden="true">{{ current_user.username[0]|upper }}</div>
+    <div>
+      <p class="perfil-board-nome">{{ current_user.username }}
+        {% if current_user.is_admin %}<span class="badge-admin-board">admin</span>{% endif %}
+      </p>
+      <p class="perfil-board-meta">
+        No grupo desde {{ current_user.created_at.strftime("%d/%m/%Y") }}<br>
+        {{ total_simulados }} simulado(s) registrado(s)
+        {%- if total_oficiais %}<br>{{ total_oficiais }} resultado(s) oficial(is) vinculado(s){% endif %}
+        {%- if total_rankings %}<br>{{ total_rankings }} ranking(s) de simulado vinculado(s){% endif %}
+      </p>
+    </div>
   </div>
 </section>
 
@@ -64,14 +60,21 @@
   </form>
 </section>
 
+{# Concursos saiu da barra inferior (que agora tem 3 abas + ação) e vive aqui. #}
+<section class="card card-flush">
+  <ul class="link-list">
+    <li><a href="{{ url_for('concursos.listar') }}">Concursos e datas de prova <span class="chev" aria-hidden="true">›</span></a></li>
+    <li><a href="{{ url_for('main.evolucao') }}">Minha evolução <span class="chev" aria-hidden="true">›</span></a></li>
+    <li><a href="{{ url_for('grupos.listar') }}">Meus grupos <span class="chev" aria-hidden="true">›</span></a></li>
+    {% if current_user.is_admin %}
+    <li><a href="{{ url_for('admin.turmas') }}">Turmas e alunos <span class="badge-admin">admin</span></a></li>
+    {% endif %}
+    <li><a href="{{ url_for('main.baixar_meus_dados') }}">Baixar meus dados <span class="chev" aria-hidden="true">›</span></a></li>
+    <li><a href="{{ url_for('auth.change_password') }}">Trocar senha <span class="chev" aria-hidden="true">›</span></a></li>
+  </ul>
+</section>
+
 <div class="form-actions">
-  <a class="btn btn-outline btn-block" href="{{ url_for('main.evolucao') }}">Minha evolução</a>
-  <a class="btn btn-outline btn-block" href="{{ url_for('grupos.listar') }}">Meus grupos</a>
-  <a class="btn btn-outline btn-block" href="{{ url_for('main.baixar_meus_dados') }}">Baixar meus dados</a>
-  {% if current_user.is_admin %}
-  <a class="btn btn-outline btn-block" href="{{ url_for('admin.turmas') }}">Turmas e alunos (admin)</a>
-  {% endif %}
-  <a class="btn btn-outline btn-block" href="{{ url_for('auth.change_password') }}">Trocar senha</a>
   <form method="post" action="{{ url_for('auth.logout') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn btn-danger btn-block">Sair da conta</button>

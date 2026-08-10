@@ -1,0 +1,435 @@
+/* Modelo "Placar" — carregado DEPOIS de app.css, em base.html.
+   Sobrescreve tokens e redesenha Início, Simulados, Estudos e Perfil.
+   Nenhuma classe de app.css foi removida: as telas não tocadas
+   (formulários, detalhe, admin, auth, erros) continuam funcionando.
+   Para reverter: apague o <link> deste arquivo em base.html. */
+
+:root {
+  /* Superfície de placar (escura) */
+  --board: #0C1B2E;
+  --board-2: #12253C;
+  --board-line: rgba(255, 255, 255, 0.12);
+  --board-muted: #8FA3BC;
+  --board-dim: #5E7290;
+  --live: #F04155;   /* vermelho legível sobre fundo escuro */
+  --up: #4FC98A;     /* alta sobre fundo escuro */
+
+  /* Superfície clara, um tom mais neutra que a anterior */
+  --bg: #F2F3F5;
+  --border: #E3E5E9;
+  --text: #12171E;
+  --muted: #626B78;
+  --faint: #8B93A0;
+  --radius: 18px;
+}
+
+body { line-height: 1.45; }
+
+/* ---------- Header vira parte do placar ---------- */
+
+.topbar { background: var(--board); }
+.topbar-inner { height: 52px; }
+.brand { font-size: 16px; }
+
+/* ---------- Superfície escura de placar ---------- */
+
+.board {
+  background: var(--board);
+  color: #fff;
+  margin: -16px -16px 14px;
+  padding: 16px 22px 22px;
+  border-radius: 0 0 26px 26px;
+}
+
+.board-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.board-title { margin: 0; font-size: 27px; font-weight: 800; letter-spacing: -0.4px; color: #fff; }
+.board-sub { margin: 7px 0 0; font-size: 13px; color: var(--board-muted); }
+
+.board-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.board-avatar:hover { background: rgba(255, 255, 255, 0.18); }
+.board :focus-visible { outline-color: #fff; }
+
+/* Filtro de concurso dentro do placar */
+.board-filtro { margin: 0; }
+.board-filtro .form-label { display: none; }
+
+select.input-board {
+  width: auto;
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+select.input-board option { color: var(--text); background: #fff; }
+
+/* ---------- Contagem regressiva ---------- */
+
+.placar-dias { display: flex; align-items: flex-end; gap: 15px; }
+
+.placar-num {
+  margin: 0;
+  font-size: 86px;
+  font-weight: 800;
+  line-height: 0.82;
+  letter-spacing: -3.5px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+.placar-cap { padding-bottom: 6px; }
+
+.placar-cap-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--board-muted);
+  line-height: 1.3;
+}
+
+.placar-cap-data { margin: 8px 0 0; font-size: 14px; font-weight: 600; color: #fff; }
+
+/* ---------- Células do placar (3 números lado a lado) ---------- */
+
+.board-cells {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 22px;
+  background: var(--board-line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.board-cell { background: var(--board-2); padding: 15px 10px 14px; }
+
+.board-value {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -1.2px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+.board-label {
+  margin: 9px 0 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--board-muted);
+  line-height: 1.3;
+}
+
+.board-scope {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  text-transform: none;
+  color: var(--board-dim);
+}
+
+.board-delta { margin: 8px 0 0; font-size: 12px; font-weight: 700; }
+.board-delta-up { color: var(--up); }
+.board-delta-down { color: var(--live); }
+.board-delta-flat { color: var(--board-dim); }
+
+/* ---------- Aviso de próxima prova ---------- */
+
+.proxima {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--red-soft);
+  border: 1px solid #F3D3D8;
+}
+
+.proxima-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+.proxima p { margin: 0; font-size: 12.5px; line-height: 1.35; color: #7A1220; }
+
+/* ---------- "Onde agir hoje" ---------- */
+
+.agir { background: var(--board); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
+
+.agir-kicker {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--live);
+}
+
+.agir-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-top: 14px; }
+.agir-materia { margin: 0; font-size: 22px; font-weight: 700; color: #fff; }
+.agir-sub { margin: 7px 0 0; font-size: 13px; line-height: 1.4; color: var(--board-muted); }
+.agir .btn { margin-top: 16px; }
+
+.btn-live { background: var(--live); color: #fff; }
+.btn-live:hover { background: #D8354A; }
+.btn-live:focus-visible { outline-color: #fff; }
+
+/* ---------- Card de evolução com seletor ---------- */
+
+.metric-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.metric-head .card-title { margin: 0; color: var(--text); }
+
+.metric-switch { display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: var(--bg); }
+
+.metric-switch button {
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 8px 13px;
+  min-height: 38px;
+  font: 600 12.5px var(--font);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.metric-switch button[aria-pressed="true"] { background: var(--board); color: #fff; }
+.metric-switch button[hidden] { display: none; }
+
+.metric-value {
+  margin: 14px 0 0;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -1.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.metric-delta { margin: 8px 0 0; font-size: 13px; font-weight: 700; color: var(--green); }
+.metric-nota { margin: 8px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+.metric-box { position: relative; height: 190px; margin-top: 14px; }
+
+/* ---------- Matérias do último simulado ---------- */
+
+.mat-list { list-style: none; margin: 0; padding: 0; }
+.mat-row + .mat-row { margin-top: 14px; }
+.mat-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.mat-nome { font-size: 14px; font-weight: 600; }
+.mat-frac { font-weight: 500; color: var(--faint); }
+.mat-pct { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--blue); }
+.mat-pct-fraca { color: var(--red); }
+.mat-row .bar-track { height: 7px; background: #EDEFF2; }
+.mat-row .bar-fill { background: var(--blue); }
+.mat-row .bar-fill-fraca { background: var(--red); }
+
+/* ---------- Calendário recolhido ---------- */
+
+.cal-details { margin-bottom: 12px; }
+
+.cal-details summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.cal-details summary::-webkit-details-marker { display: none; }
+.cal-details summary::after { content: "▾"; color: var(--faint); font-size: 13px; }
+.cal-details[open] summary::after { content: "▴"; }
+.cal-details[open] .cal-grid { margin-top: 6px; }
+
+/* ---------- Segmento Meus · Turma · Oficiais ---------- */
+
+.seg { display: flex; gap: 5px; margin-top: 16px; padding: 4px; border-radius: 14px; background: rgba(255, 255, 255, 0.08); }
+
+.seg a {
+  flex: 1;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--board-muted);
+  text-decoration: none;
+}
+
+.seg a:hover { color: #fff; }
+.seg a[aria-current="page"] { background: #fff; color: var(--board); }
+.seg-explica { margin: 12px 0 0; font-size: 12px; font-weight: 500; line-height: 1.4; color: var(--board-dim); }
+
+/* ---------- Cards de simulado ---------- */
+
+.card { border-radius: var(--radius); }
+.cards-list li + li { margin-top: 10px; }
+.sim-card { padding: 16px 18px; }
+.sim-card-top { align-items: flex-start; }
+.sim-date { font-size: 15px; }
+.sim-concurso { margin-top: 6px; font-size: 12.5px; }
+.sim-nota-value { font-size: 32px; letter-spacing: -1.2px; color: var(--text); }
+.sim-delta { margin: 6px 0 0; font-size: 11px; font-weight: 700; }
+.sim-delta-up { color: var(--green); }
+.sim-delta-down { color: var(--red); }
+
+.sim-mats { display: flex; gap: 5px; margin-top: 14px; }
+
+.sim-mat {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 7px 4px;
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sim-mat-fraca { background: var(--red-soft); color: var(--red); }
+
+/* ---------- Perfil ---------- */
+
+.perfil-board { display: flex; align-items: center; gap: 16px; }
+
+.perfil-avatar-big {
+  width: 66px;
+  height: 66px;
+  flex-shrink: 0;
+  border-radius: 20px;
+  background: var(--live);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.perfil-board-nome { margin: 0; font-size: 20px; font-weight: 700; color: #fff; }
+.perfil-board-meta { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--board-muted); }
+
+.badge-admin-board {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.link-list { list-style: none; margin: 0; padding: 0; }
+
+.link-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 52px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 500;
+  border-bottom: 1px solid #EDEFF2;
+}
+
+.link-list li:last-child a { border-bottom: 0; }
+.link-list a:hover { background: var(--bg); }
+.link-list .chev { color: var(--faint); font-size: 20px; line-height: 1; }
+.card-flush { padding: 0; overflow: hidden; }
+
+/* ---------- Bottom nav: 3 abas + ação central ---------- */
+
+.content { padding-bottom: calc(108px + env(safe-area-inset-bottom)); }
+
+.bottomnav {
+  height: calc(88px + env(safe-area-inset-bottom));
+  align-items: flex-start;
+  padding-top: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px);
+}
+
+.bottomnav-item { font-size: 10.5px; gap: 5px; padding: 4px 0 0; }
+.bottomnav-item svg { width: 23px; height: 23px; }
+
+.bottomnav-slot { flex: 0 0 84px; display: flex; justify-content: center; }
+
+.nav-fab {
+  width: 60px;
+  height: 60px;
+  margin-top: -24px;
+  border-radius: 22px;
+  background: var(--red);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 22px rgba(185, 28, 48, 0.4);
+}
+
+.nav-fab:hover { background: var(--red-dark); }
+
+/* O FAB antigo sobe para não colidir com a nav mais alta (só sobra nas
+   telas de importação do admin; nas demais ele saiu do template). */
+.fab { bottom: calc(104px + env(safe-area-inset-bottom)); }
+
+/* ---------- Tablet / desktop ---------- */
+
+@media (min-width: 768px) {
+  .board { margin: -16px -16px 16px; padding: 20px 28px 26px; border-radius: 0 0 30px 30px; }
+  .placar-num { font-size: 104px; }
+  .board-value { font-size: 40px; }
+  .bottomnav { display: none; }
+  .content { padding-bottom: 40px; }
+  .seg { max-width: 420px; }
+  .metric-box { height: 240px; }
+}
+
+@media (min-width: 1024px) {
+  .board { max-width: 1040px; margin-left: auto; margin-right: auto; }
+}

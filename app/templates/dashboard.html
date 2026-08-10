@@ -1,44 +1,129 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — ITA-IME Analytics{% endblock %}
+{% block title %}Início — ITA-IME Analytics{% endblock %}
 
 {% block content %}
-<div class="page-head">
-  <h1>Olá, {{ current_user.username }}</h1>
-  {% if simulados %}
-  <a class="btn btn-primary btn-sm show-desktop" href="{{ url_for('simulados.novo') }}">+ Novo simulado</a>
-  {% endif %}
-</div>
+{% set ultimo = simulados[-1] if simulados else none %}
+{% set penult = simulados[-2] if simulados and simulados|length > 1 else none %}
+{% set delta = (ultimo.nota_geral - penult.nota_geral) if penult else none %}
+{% set pior = (ultimo.materias|sort(attribute="percentual"))[0] if ultimo and ultimo.materias else none %}
 
-{% if meus_concursos|length > 1 %}
-<form method="get" class="filter-bar">
-  <label class="form-label" for="concurso">Concurso</label>
-  <select class="input input-select" id="concurso" name="concurso" data-autosubmit>
-    <option value="">Todos</option>
-    {% for c in meus_concursos %}
-    <option value="{{ c.id }}" {% if concurso_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
-    {% endfor %}
-  </select>
-</form>
-{% endif %}
+<section class="board" aria-label="Placar">
+  <div class="board-top">
+    {% if meus_concursos|length > 1 %}
+    <form method="get" class="board-filtro">
+      <label class="form-label" for="concurso">Concurso</label>
+      <select class="input input-board" id="concurso" name="concurso" data-autosubmit>
+        <option value="">Todos os concursos</option>
+        {% for c in meus_concursos %}
+        <option value="{{ c.id }}" {% if concurso_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% else %}
+    <p class="board-title">Olá, {{ current_user.username }}</p>
+    {% endif %}
+    <a class="board-avatar" href="{{ url_for('main.perfil') }}" aria-label="Seu perfil">{{ current_user.username[0]|upper }}</a>
+  </div>
 
-{% if alvo %}
-<section class="card countdown-card" aria-label="Contagem regressiva">
-  <div class="countdown-main">
-    <p class="countdown-num">{{ dias_restantes }}</p>
-    <div class="countdown-info">
-      <p class="countdown-label">dias até a prova</p>
-      <p class="countdown-target">{{ alvo.nome }} · {{ alvo.data_prova.strftime("%d/%m/%Y") }}</p>
+  {% if alvo %}
+  <div class="placar-dias">
+    <p class="placar-num">{{ dias_restantes }}</p>
+    <div class="placar-cap">
+      <p class="placar-cap-label">dias até<br>a prova</p>
+      <p class="placar-cap-data">{{ alvo.nome }} · {{ alvo.data_prova.strftime("%d/%m/%Y") }}</p>
     </div>
   </div>
-  {% if stats and stats.ritmo_semana is not none %}
-  <p class="trend-chip {{ 'trend-up' if stats.ritmo_semana >= 0 else 'trend-down' }}">
-    {{ "▲" if stats.ritmo_semana >= 0 else "▼" }} {{ "%+.1f"|format(stats.ritmo_semana) }} pts/semana
-  </p>
+  {% else %}
+  <div class="placar-dias">
+    <div class="placar-cap">
+      <p class="placar-cap-label">nenhuma prova futura cadastrada</p>
+      <p class="placar-cap-data"><a href="{{ url_for('concursos.listar') }}">Cadastrar um concurso</a></p>
+    </div>
+  </div>
   {% endif %}
+
+  {% if stats %}
+  <div class="board-cells">
+    <div class="board-cell">
+      <p class="board-value">{{ "%.1f"|format(stats.ultima) }}</p>
+      <p class="board-label">minha nota<span class="board-scope">só sua · {{ ultimo.titulo_curto }}</span></p>
+      {% if delta is not none %}
+      <p class="board-delta {{ 'board-delta-up' if delta > 0 else ('board-delta-down' if delta < 0 else 'board-delta-flat') }}">
+        {{ "▲" if delta > 0 else ("▼" if delta < 0 else "=") }} {{ "%.1f"|format(delta|abs) }}
+      </p>
+      {% endif %}
+    </div>
+    <div class="board-cell">
+      <p class="board-value">{{ "%.1f"|format(stats.melhor) }}</p>
+      <p class="board-label">melhor<span class="board-scope">em {{ stats.total }} simulados</span></p>
+    </div>
+    <div class="board-cell">
+      <p class="board-value">{% if stats.ritmo_semana is not none %}{{ "%+.1f"|format(stats.ritmo_semana) }}{% else %}—{% endif %}</p>
+      <p class="board-label">ritmo<span class="board-scope">pontos por semana</span></p>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+{% if not simulados %}
+<section class="card empty-state">
+  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+  <h2>Nenhum simulado ainda</h2>
+  <p>Registre seu primeiro simulado para o placar começar a contar.</p>
+  <a class="btn btn-primary" href="{{ url_for('simulados.novo') }}">Registrar primeiro simulado</a>
+</section>
+{% else %}
+
+{% if pior %}
+<section class="agir" aria-label="Onde agir hoje">
+  <p class="agir-kicker">Onde agir hoje</p>
+  <div class="agir-row">
+    <div>
+      <p class="agir-materia">{{ pior.materia.value }}</p>
+      <p class="agir-sub">{{ pior.percentual|round|int }}% de acerto no {{ ultimo.titulo_curto }} — sua matéria mais fraca.</p>
+    </div>
+  </div>
+  <a class="btn btn-live btn-block" href="{{ url_for('estudos.treino') }}">Treinar {{ pior.materia.value }}</a>
 </section>
 {% endif %}
 
-<section class="card calendario-card" aria-label="Calendário de provas">
+<section class="card">
+  <div class="metric-head">
+    <h2 class="card-title">Evolução</h2>
+    <div class="metric-switch" role="group" aria-label="Métrica do gráfico">
+      <button type="button" data-metric="notas" aria-pressed="true">Nota</button>
+      <button type="button" data-metric="posicao" aria-pressed="false" hidden>Posição</button>
+      <button type="button" data-metric="tendencia" aria-pressed="false" hidden>Projeção</button>
+    </div>
+  </div>
+  <p class="metric-value" id="metric-value">—</p>
+  <p class="metric-nota" id="metric-nota"></p>
+  <div class="metric-box"><canvas id="chart-metric" role="img" aria-label="Gráfico da métrica selecionada"></canvas></div>
+</section>
+
+{% if ultimo.materias %}
+<section class="card">
+  <div class="card-head-row">
+    <h2 class="card-title">Matérias no {{ ultimo.titulo_curto }}</h2>
+    <span class="card-sub-inline">pior primeiro</span>
+  </div>
+  <ul class="mat-list">
+    {% for m in ultimo.materias|sort(attribute="percentual") %}
+    {% set larg = ((m.percentual / 5)|round|int) * 5 %}
+    <li class="mat-row">
+      <div class="mat-head">
+        <span class="mat-nome">{{ m.materia.value }} <span class="mat-frac">{{ m.acertos }}/{{ m.total_questoes }}</span></span>
+        <span class="mat-pct {{ 'mat-pct-fraca' if loop.first }}">{{ m.percentual|round|int }}%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill {{ 'bar-fill-fraca' if loop.first }} bar-{{ larg }}"></div></div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<details class="card cal-details">
+  <summary>Calendário de provas · {{ calendario.titulo }}</summary>
   <div class="cal-head">
     <a class="cal-nav" href="{{ url_for('main.dashboard', concurso=concurso_id, cal=calendario.prev) }}" aria-label="Mês anterior">‹</a>
     <span class="cal-titulo">{{ calendario.titulo }}</span>
@@ -63,65 +148,21 @@
     </tbody>
   </table>
   <p class="cal-legenda"><span class="cal-dot"></span> dia de prova</p>
-</section>
+</details>
 
-{% if not simulados %}
-<section class="card empty-state">
-  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
-  <h2>Nenhum simulado ainda</h2>
-  <p>Registre seu primeiro simulado para ver sua evolução de notas por aqui.</p>
-  <a class="btn btn-primary" href="{{ url_for('simulados.novo') }}">Registrar primeiro simulado</a>
-</section>
-{% else %}
-
-<section class="stats-grid" aria-label="Resumo">
-  <div class="stat"><p class="stat-value">{{ stats.total }}</p><p class="stat-label">simulados</p></div>
-  <div class="stat"><p class="stat-value">{{ "%.1f"|format(stats.ultima) }}</p><p class="stat-label">última nota</p></div>
-  <div class="stat"><p class="stat-value">{{ "%.1f"|format(stats.melhor) }}</p><p class="stat-label">melhor nota</p></div>
-  <div class="stat">
-    <p class="stat-value">{% if stats.ritmo_semana is not none %}{{ "%+.1f"|format(stats.ritmo_semana) }}{% else %}—{% endif %}</p>
-    <p class="stat-label">pts/semana</p>
+<a class="card treino-link" href="{{ url_for('simulados.listar') }}">
+  <div class="treino-link-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
   </div>
-</section>
-
-<div class="charts-grid">
-  {% if chart_data.posicao %}
-  <section class="card">
-    <h2 class="card-title">Evolução da posição</h2>
-    <p class="card-sub">Posição estimada nos simulados — mais acima = melhor colocação.</p>
-    <div class="chart-box"><canvas id="chart-posicao" role="img" aria-label="Gráfico de linha com a evolução da posição estimada"></canvas></div>
-  </section>
-  {% endif %}
-
-  <section class="card">
-    <h2 class="card-title">Evolução da nota geral</h2>
-    <div class="chart-box"><canvas id="chart-notas" role="img" aria-label="Gráfico de linha com a evolução da nota geral"></canvas></div>
-  </section>
-
-  <section class="card">
-    <h2 class="card-title">Desempenho por matéria (%)</h2>
-    <details class="materia-toggle">
-      <summary>Matérias exibidas</summary>
-      <div id="materia-checks" class="check-inline"></div>
-    </details>
-    <div class="chart-box chart-box-tall"><canvas id="chart-materias" role="img" aria-label="Gráfico de linhas com o percentual de acertos por matéria"></canvas></div>
-  </section>
-
-  {% if chart_data.tendencia %}
-  <section class="card">
-    <h2 class="card-title">Tendência até a prova</h2>
-    <p class="card-sub">Projeção linear da nota geral até {{ alvo.nome }}</p>
-    <div class="chart-box"><canvas id="chart-tendencia" role="img" aria-label="Gráfico com a tendência da nota geral projetada até a data da prova"></canvas></div>
-  </section>
-  {% endif %}
-</div>
+  <div class="treino-link-text">
+    <p class="treino-link-title">Ver os {{ stats.total }} simulados</p>
+    <p class="treino-link-sub">Histórico, ranking da turma e listões oficiais</p>
+  </div>
+  <span class="treino-link-arrow" aria-hidden="true">›</span>
+</a>
 
 <script type="application/json" id="chart-data">{{ chart_data|tojson }}</script>
 {% endif %}
-
-<a class="fab hide-desktop" href="{{ url_for('simulados.novo') }}" aria-label="Registrar novo simulado">
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-</a>
 {% endblock %}
 
 {% block scripts %}

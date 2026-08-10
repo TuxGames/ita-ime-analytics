@@ -2,12 +2,32 @@
 {% block title %}Resultados oficiais — ITA-IME Analytics{% endblock %}
 
 {% block content %}
-<div class="page-head">
-  <h1>Resultados oficiais</h1>
-  {% if current_user.is_admin %}
-  <a class="btn btn-primary btn-sm show-desktop" href="{{ url_for('oficiais.importar') }}">+ Importar</a>
+<section class="board" aria-label="Resultados oficiais">
+  <div class="board-top">
+    <div>
+      <h1 class="board-title">Simulados</h1>
+      <p class="board-sub">Três recortes do mesmo assunto — escolha de quem é a nota.</p>
+    </div>
+    <a class="board-avatar" href="{{ url_for('main.perfil') }}" aria-label="Seu perfil">{{ current_user.username[0]|upper }}</a>
+  </div>
+  <nav class="seg" aria-label="Recorte dos resultados">
+    <a href="{{ url_for('simulados.listar') }}">Meus</a>
+    <a href="{{ url_for('simulados.turma_listar') }}">Turma</a>
+    <a href="{{ url_for('oficiais.index') }}" aria-current="page">Oficiais</a>
+  </nav>
+  <p class="seg-explica">Oficiais — o listão real divulgado pela banca. Aqui a posição é oficial, não estimada.</p>
+
+  {% if minhas %}
+  <div class="board-cells">
+    {% for ln in minhas[:3] %}
+    <div class="board-cell">
+      <p class="board-value">{% if ln.status == "classificado" %}{{ ln.classificacao }}{% else %}—{% endif %}</p>
+      <p class="board-label">{{ ln.resultado.concurso_nome }}<span class="board-scope">{% if ln.status == "classificado" %}classificado{% else %}{{ ln.status_label }}{% endif %}</span></p>
+    </div>
+    {% endfor %}
+  </div>
   {% endif %}
-</div>
+</section>
 
 {% if not resultados %}
 <section class="card empty-state">
@@ -81,8 +101,8 @@
 {% endif %}
 
 {% if current_user.is_admin %}
-<a class="fab hide-desktop" href="{{ url_for('oficiais.importar') }}" aria-label="Importar resultado oficial">
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-</a>
+<div class="form-actions">
+  <a class="btn btn-outline btn-block" href="{{ url_for('oficiais.importar') }}">Importar listão (admin)</a>
+</div>
 {% endif %}
 {% endblock %}
