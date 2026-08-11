@@ -433,3 +433,20 @@ select.input-board option { color: var(--text); background: #fff; }
 @media (min-width: 1024px) {
   .board { max-width: 1040px; margin-left: auto; margin-right: auto; }
 }
+
+/* ---------- Telas de erro ---------- */
+
+/* O código vira marca d'água: quem chegou aqui precisa ler a FRASE, não o
+   número. Por isso ele é decorativo (aria-hidden) e o <h1> passa a ser a
+   mensagem — antes o h1 era o "404", que não diz nada a leitor de tela. */
+.error-code {
+  margin: 0;
+  font-size: 68px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -3px;
+  font-variant-numeric: tabular-nums;
+  color: var(--border);
+}
+
+.empty-state h1 { color: var(--text); font-size: 19px; margin: 6px 0 6px; }

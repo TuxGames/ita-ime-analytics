@@ -2,8 +2,8 @@
 {% block title %}Página não encontrada — ITA-IME Analytics{% endblock %}
 {% block content %}
 <section class="card empty-state">
-  <h1 class="error-code">404</h1>
-  <h2>Não encontrado</h2>
+  <p class="error-code" aria-hidden="true">404</p>
+  <h1>Não encontrado</h1>
   <p>Essa página não existe ou você não tem acesso a ela.</p>
   <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">Ir para o Dashboard</a>
 </section>
