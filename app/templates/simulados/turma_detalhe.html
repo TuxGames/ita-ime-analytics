@@ -60,6 +60,7 @@
       {%- if t.fonte %} · {{ t.fonte }}{% endif %}
     </p>
   </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('simulados.turma_listar') }}">Voltar</a>
 </div>
 
 {% if turmas|length > 1 %}

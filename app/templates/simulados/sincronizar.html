@@ -4,14 +4,15 @@
 
 {% block content %}
 <div class="page-head">
-  <h1>Sincronizar simulados</h1>
+  <div>
+    <h1>Sincronizar simulados</h1>
+    <p class="page-sub">
+      Traz o que você aparece nos rankings da turma e ainda não trouxe. Só
+      adiciona — nunca apaga nem sobrescreve o que você digitou à mão.
+    </p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('simulados.listar') }}">Voltar</a>
 </div>
-
-<p class="card-sub">
-  Traz para os seus simulados tudo em que você aparece nos rankings da turma e
-  ainda não trouxe. Só adiciona — nunca apaga nem sobrescreve um registro que
-  você já digitou à mão.
-</p>
 
 {% if not itens %}
 <section class="card empty-state">
