@@ -3,10 +3,12 @@
 
 {% block content %}
 <div class="page-head">
-  <h1>Plano da semana</h1>
+  <div>
+    <h1>Plano da semana</h1>
+    <p class="page-sub">Marque o que pretende estudar em cada dia. Pode mudar quando quiser.</p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('estudos.index') }}">Voltar</a>
 </div>
-
-<p class="page-intro">Marque as matérias que você pretende estudar em cada dia. Pode mudar quando quiser.</p>
 
 <form method="post" novalidate>
   {{ form.hidden_tag() }}
