@@ -87,6 +87,7 @@
       {%- if r.data %} · {{ r.data.strftime("%d/%m/%Y") }}{% endif %}
     </p>
   </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('oficiais.index') }}">Voltar</a>
 </div>
 
 {% if turmas|length > 1 %}
@@ -103,12 +104,14 @@
 {% endif %}
 
 {% if current_user.is_admin %}
+<section class="card">
 <p class="card-sub">
   Exportar (no formato que a importação aceita):
   {% for t in turmas %}
   <a href="{{ url_for('oficiais.exportar', resultado_id=r.id, turma=t) }}">{{ TURMA_CURTO[t] }}</a>{% if not loop.last %} ·{% endif %}
   {% endfor %}
 </p>
+</section>
 {% endif %}
 
 <section class="card">
