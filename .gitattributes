@@ -1,0 +1,5 @@
+# Shell script roda no servidor Linux: precisa de LF também na cópia de
+# trabalho, não só no repositório. Com CRLF o bash morre logo na primeira
+# linha com "$'\r': command not found". O `eol=lf` vence o core.autocrlf=true
+# que está configurado nesta máquina Windows.
+*.sh text eol=lf
