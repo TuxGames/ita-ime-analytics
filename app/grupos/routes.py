@@ -93,6 +93,25 @@ def detalhe(grupo_id):
     )
 
 
+@grupos_bp.route("/<int:grupo_id>/editar", methods=["GET", "POST"])
+@login_required
+def editar(grupo_id):
+    """Só o dono renomeia. Mesma validação da criação (o form é o mesmo), e sem
+    histórico de nomes: o nome atual é a única verdade."""
+    grupo, _ = _get_grupo_visivel(grupo_id)
+    if grupo.criado_por != current_user.id:
+        abort(403)
+
+    form = GrupoForm(obj=grupo)
+    if form.validate_on_submit():
+        grupo.nome = form.nome.data.strip()
+        db.session.commit()
+        flash("Grupo renomeado.", "success")
+        return redirect(url_for("grupos.detalhe", grupo_id=grupo.id))
+
+    return render_template("grupos/editar.html", form=form, grupo=grupo)
+
+
 @grupos_bp.post("/<int:grupo_id>/convidar")
 @login_required
 def convidar(grupo_id):

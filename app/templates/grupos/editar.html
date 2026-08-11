@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Editar {{ grupo.nome }} — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Editar grupo</h1>
+</div>
+
+<section class="card">
+  <h2 class="card-title">Nome</h2>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      {{ form.nome.label(class="form-label") }}
+      {{ form.nome(class="input" + (" input-error" if form.nome.errors else ""), maxlength="60") }}
+      {% for e in form.nome.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Salvar nome</button>
+  </form>
+</section>
+
+<div class="form-actions">
+  <a class="btn btn-ghost btn-block" href="{{ url_for('grupos.detalhe', grupo_id=grupo.id) }}">Voltar</a>
+</div>
+{% endblock %}

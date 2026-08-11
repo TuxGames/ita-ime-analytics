@@ -105,6 +105,7 @@
 
 <div class="form-actions">
   {% if eh_dono %}
+  <a class="btn btn-outline btn-block" href="{{ url_for('grupos.editar', grupo_id=grupo.id) }}">Editar grupo</a>
   <form method="post" action="{{ url_for('grupos.apagar', grupo_id=grupo.id) }}"
         data-confirm="Apagar o grupo &quot;{{ grupo.nome }}&quot;? Isso não apaga nenhum dado de estudo dos membros.">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
