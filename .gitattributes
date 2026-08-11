@@ -1,3 +1,11 @@
+# Normaliza tudo que for texto para LF dentro do repositório, deixando a cópia
+# de trabalho seguir a convenção do sistema. Passa a valer para quem clonar,
+# em vez de depender do core.autocrlf de cada máquina. A detecção do `auto`
+# ignora binários, então não há risco de corromper arquivo não-texto.
+* text=auto
+
+# Regras mais específicas vêm depois: em .gitattributes a última que casa vence.
+
 # Shell script roda no servidor Linux: precisa de LF também na cópia de
 # trabalho, não só no repositório. Com CRLF o bash morre logo na primeira
 # linha com "$'\r': command not found". O `eol=lf` vence o core.autocrlf=true
