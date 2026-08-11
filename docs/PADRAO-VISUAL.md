@@ -33,9 +33,10 @@ template; use o token.
 
 ## Dois níveis de tela
 
-**Nível 1 — destino de navegação** (Início, Simulados, Estudos, Perfil, e as
-sub-abas Turma/Oficiais). Abre com a superfície escura `.board`, que sangra até
-a borda:
+**Nível 1 — raiz de seção.** Além dos destinos da barra de navegação (Início,
+Simulados, Estudos, Perfil) e das sub-abas Turma/Oficiais, entram aqui as
+raízes alcançadas pelo perfil: Concursos, Grupos e Turmas (admin). Abre com a
+superfície escura `.board`, que sangra até a borda:
 
 ```html
 <section class="board" aria-label="Simulados">
@@ -61,6 +62,10 @@ a borda:
 
 Misturar os dois na mesma tela é o erro mais fácil de cometer. Se a tela é um
 passo dentro de um fluxo, ela é nível 2.
+
+Toda tela de nível 2 leva um **"Voltar"** no `.page-head`, como
+`.btn.btn-ghost.btn-sm`, apontando para a raiz da própria seção. É a única
+saída em telas fundas, onde a barra de navegação não ajuda.
 
 ---
 
