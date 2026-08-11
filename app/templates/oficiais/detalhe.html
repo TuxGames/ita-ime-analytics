@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import monograma %}
 {% block title %}{{ r.concurso_nome }} — ITA-IME Analytics{% endblock %}
 
 {# Todos os recortes abaixo passam o filtro ativo, para os números da tela
@@ -146,7 +147,7 @@
            laço é a colocação dentro do recorte mostrado. #}
         <span class="pos-colegio">{{ loop.index }}º</span>
         <span class="of-linha-pos">#{{ ln.classificacao }}</span>
-        <span class="of-linha-nome">{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span>
+        {{ monograma(ln.nome, "sm") }}<span class="of-linha-nome">{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span>
         {% if ln.metrica_valor is not none %}<span class="of-linha-mp">{{ "%.4f"|format(ln.metrica_valor) }}</span>{% endif %}
       </div>
       {{ nota_chips(ln) }}
@@ -174,7 +175,7 @@
         <tr class="{{ 'of-linha-eu' if ln.user_id == current_user.id else '' }}">
           <td class="td-pos-colegio">{{ loop.index }}º</td>
           <td class="td-nota">#{{ ln.classificacao }}</td>
-          <td>{{ ln.nome }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</td>
+          <td><span class="pessoa">{{ monograma(ln.nome, "sm") }}<span>{{ ln.nome }}</span></span>{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</td>
           {% if not turma %}<td class="td-status">{{ ln.turma_curto }}</td>{% endif %}
           {% if r.metrica %}<td>{% if ln.metrica_valor is not none %}{{ "%.4f"|format(ln.metrica_valor) }}{% else %}—{% endif %}</td>{% endif %}
           {% for m in materias %}
@@ -198,7 +199,7 @@
     {% for ln in sem_aprov %}
     <li class="of-linha {{ 'of-linha-eu' if ln.user_id == current_user.id else '' }}">
       <div class="of-linha-head">
-        <span class="of-linha-nome">{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span>
+        {{ monograma(ln.nome, "sm") }}<span class="of-linha-nome">{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span>
         {% if ln.metrica_valor is not none %}<span class="of-linha-mp">{{ "%.4f"|format(ln.metrica_valor) }}</span>{% endif %}
       </div>
       {{ nota_chips(ln) }}
@@ -217,7 +218,7 @@
   <ul class="of-simples">
     {% for ln in nao_encontrados %}
     <li>
-      <span>{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span>
+      <span class="pessoa">{{ monograma(ln.nome, "sm") }}<span>{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span></span>
       {{ sou_eu(ln) }}
       {{ editar_linha(ln) }}
     </li>

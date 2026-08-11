@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import select_concurso %}
+{% from "_macros.html" import select_concurso, monograma %}
 {% block title %}{{ t.nome }} — ITA-IME Analytics{% endblock %}
 
 {% macro editar_linha(ln) %}
@@ -147,6 +147,7 @@
         data-id="{{ ln.id }}">
       <div class="of-linha-head">
         <span class="of-linha-pos">{{ pos }}º</span>
+        {{ monograma(ln.nome, "sm") }}
         <span class="of-linha-nome">{{ ln.nome }}
           {%- if not filtro %} <span class="serie-chip">{{ ln.turma_curto }}</span>{% endif %}
           {%- if ln.serie %} <span class="serie-chip">{{ ln.serie }}</span>{% endif %}

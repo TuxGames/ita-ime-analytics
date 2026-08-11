@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import monograma %}
 {% block title %}{{ rotulo }} — ITA-IME Analytics{% endblock %}
 
 {% block content %}
@@ -29,11 +30,11 @@
     {% for item in itens %}
     <li class="of-linha">
       <a class="aluno-link" href="{{ url_for('admin.aluno_detalhe', aluno_id=item.aluno.id) }}">
-        <span class="of-linha-nome">{{ item.aluno.nome }}
+        <span class="pessoa">{{ monograma(item.aluno.nome, "sm") }}<span class="of-linha-nome">{{ item.aluno.nome }}
           {%- if item.aluno.serie %} <span class="serie-chip">{{ item.aluno.serie }}</span>{% endif %}
           {%- if not item.aluno.ativo %} <span class="serie-chip">inativo</span>{% endif %}
           {%- if item.aluno.user_id %} <span class="badge-eu">tem conta</span>{% endif %}
-        </span>
+        </span></span>
         <span class="aluno-nums">
           <span class="of-linha-mp">{{ item.simulados }} sim.</span>
           <span class="of-linha-pos">{% if item.media is not none %}{{ "%.2f"|format(item.media) }}{% else %}—{% endif %}</span>

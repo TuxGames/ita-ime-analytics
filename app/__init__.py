@@ -60,6 +60,11 @@ def create_app(config_class=Config) -> Flask:
     app.jinja_env.filters["rotulo_curto"] = rotulo_curto
     app.jinja_env.globals["titulo_simulado"] = compor_titulo
 
+    from .monograma import indice_de_cor, iniciais
+
+    app.jinja_env.globals["iniciais_do_nome"] = iniciais
+    app.jinja_env.globals["cor_do_nome"] = indice_de_cor
+
     from .security import register_security_headers
 
     register_security_headers(app)

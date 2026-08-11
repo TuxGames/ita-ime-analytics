@@ -1,10 +1,13 @@
 {% extends "base.html" %}
+{% from "_macros.html" import monograma %}
 {% block title %}Perfil — ITA-IME Analytics{% endblock %}
 
 {% block content %}
 <section class="board" aria-label="Perfil">
   <div class="perfil-board">
-    <div class="perfil-avatar-big" aria-hidden="true">{{ current_user.username[0]|upper }}</div>
+    {# Monograma no lugar da inicial solta: usa o nome declarado no perfil, que
+       é o mesmo que aparece nos listões, então bate com o do ranking. #}
+    {{ monograma(current_user.nome_oficial or current_user.username, "lg") }}
     <div>
       <p class="perfil-board-nome">{{ current_user.username }}
         {% if current_user.is_admin %}<span class="badge-admin-board">admin</span>{% endif %}

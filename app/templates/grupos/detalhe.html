@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import monograma %}
 {% block title %}{{ grupo.nome }} — ITA-IME Analytics{% endblock %}
 
 {% block content %}
@@ -63,10 +64,17 @@
   <ul class="of-simples">
     {% for m in membros %}
     <li>
-      <span>
-        {{ m.user.username }}
-        {%- if m.grupo.criado_por == m.user_id %} <span class="serie-chip">dono</span>{% endif %}
-        {%- if m.status == "convidado" %} <span class="serie-chip">convite pendente</span>{% endif %}
+      {# .pessoa mantém monograma e nome colados: o <li> é space-between e sem o
+         agrupador o nome era jogado para a outra ponta da linha.
+         Monograma pelo nome real quando a pessoa declarou um; o username é só
+         o apelido de login e daria iniciais que ninguém reconhece. #}
+      <span class="pessoa">
+        {{ monograma(m.user.nome_oficial or m.user.username, "sm") }}
+        <span>
+          {{ m.user.username }}
+          {%- if m.grupo.criado_por == m.user_id %} <span class="serie-chip">dono</span>{% endif %}
+          {%- if m.status == "convidado" %} <span class="serie-chip">convite pendente</span>{% endif %}
+        </span>
       </span>
       {% if eh_dono and m.user_id != current_user.id %}
       <form method="post" action="{{ url_for('grupos.remover_membro', grupo_id=grupo.id, membro_id=m.id) }}"

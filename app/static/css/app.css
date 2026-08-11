@@ -857,3 +857,42 @@ code { background: var(--blue-soft); padding: 1px 6px; border-radius: 6px; font-
   .form-actions { grid-template-columns: repeat(3, minmax(0, 220px)); }
   .form-actions .btn-block { width: auto; }
 }
+
+/* Monograma — iniciais no lugar de foto de perfil (app/monograma.py).
+   A cor vem de mono-c0..mono-c11; o índice é calculado no servidor a partir do
+   nome, então a mesma pessoa cai sempre na mesma classe. Mesma ideia das
+   .bar-N: classe pronta em vez de style inline, que a CSP bloqueia. */
+.mono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  user-select: none;
+}
+.mono-sm { width: 28px; height: 28px; font-size: 11px; }
+.mono-md { width: 36px; height: 36px; font-size: 13px; }
+.mono-lg { width: 64px; height: 64px; font-size: 22px; }
+
+/* Contraste com texto branco conferido: pior caso 5,47:1 (limite WCAG AA 4,5:1). */
+.mono-c0  { background: #1D3557; }
+.mono-c1  { background: #B91C30; }
+.mono-c2  { background: #166534; }
+.mono-c3  { background: #7C2D12; }
+.mono-c4  { background: #4C1D95; }
+.mono-c5  { background: #0F766E; }
+.mono-c6  { background: #9A3412; }
+.mono-c7  { background: #1E40AF; }
+.mono-c8  { background: #831843; }
+.mono-c9  { background: #3F6212; }
+.mono-c10 { background: #155E75; }
+.mono-c11 { background: #5B21B6; }
+
+/* Nome com monograma ao lado, o arranjo usado nas listas de gente. */
+.pessoa { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pessoa > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
