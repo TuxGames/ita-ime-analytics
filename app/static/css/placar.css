@@ -450,3 +450,18 @@ select.input-board option { color: var(--text); background: #fff; }
 }
 
 .empty-state h1 { color: var(--text); font-size: 19px; margin: 6px 0 6px; }
+
+/* ---------- Autenticação ---------- */
+
+/* O app inteiro abre numa superfície escura; login e cadastro passam a abrir
+   igual, em vez do logo azul sobre fundo claro do layout antigo. */
+.auth-hero {
+  background: var(--board);
+  border-radius: 22px;
+  padding: 26px 20px 24px;
+  margin-bottom: 14px;
+}
+
+.auth-logo { color: #fff; font-size: 30px; letter-spacing: -0.5px; }
+.auth-sub { color: var(--board-muted); margin-top: 6px; }
+.auth-card { padding: 20px 18px; }

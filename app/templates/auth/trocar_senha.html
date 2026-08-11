@@ -13,7 +13,10 @@
 </div>
 {% endif %}
 
-<div class="card">
+<section class="card">
+  <p class="card-sub">
+    A senha nova vale a partir do próximo login. Sua sessão atual continua aberta.
+  </p>
   <form method="post" novalidate>
     {{ form.hidden_tag() }}
     {{ field(form.current_password, autocomplete="current-password") }}
@@ -21,5 +24,5 @@
     {{ field(form.confirm_password, autocomplete="new-password") }}
     <button type="submit" class="btn btn-primary btn-block">Salvar nova senha</button>
   </form>
-</div>
+</section>
 {% endblock %}
