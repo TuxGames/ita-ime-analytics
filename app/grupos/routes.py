@@ -2,8 +2,8 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 from flask_login import current_user, login_required
 
 from ..extensions import db
-from ..forms import ConvidarMembroForm, GrupoForm
-from ..grupo_evolucao import PERIODOS, evolucao_do_grupo
+from ..forms import ConvidarMembroForm, GrupoEdicaoForm, GrupoForm
+from ..grupo_evolucao import PERIODOS, evolucao_do_grupo, ranking_de_notas
 from ..models import MATERIAS_SIMULADO, Grupo, GrupoMembro, User, utcnow
 from ..oficiais_import import materias_da_query
 
@@ -81,6 +81,9 @@ def detalhe(grupo_id):
     dados_js = evolucao_do_grupo(grupo, periodo, recorte)
     eh_dono = grupo.criado_por == current_user.id
     convidar_form = ConvidarMembroForm() if eh_dono else None
+    # Placar de notas só existe quando o dono liga; desligado, a tela fica
+    # exatamente como era (evolução e volume de questões).
+    notas = ranking_de_notas(grupo, periodo, recorte) if grupo.mostrar_ranking else None
 
     return render_template(
         "grupos/detalhe.html",
@@ -89,6 +92,7 @@ def detalhe(grupo_id):
         dados_js=dados_js,
         periodo=dados_js["periodo"],
         convidar_form=convidar_form,
+        notas=notas,
         membros=[m for m in grupo.membros if m.status != "saiu"],
     )
 
@@ -102,11 +106,12 @@ def editar(grupo_id):
     if grupo.criado_por != current_user.id:
         abort(403)
 
-    form = GrupoForm(obj=grupo)
+    form = GrupoEdicaoForm(obj=grupo)
     if form.validate_on_submit():
         grupo.nome = form.nome.data.strip()
+        grupo.mostrar_ranking = bool(form.mostrar_ranking.data)
         db.session.commit()
-        flash("Grupo renomeado.", "success")
+        flash("Grupo atualizado.", "success")
         return redirect(url_for("grupos.detalhe", grupo_id=grupo.id))
 
     return render_template("grupos/editar.html", form=form, grupo=grupo)

@@ -24,6 +24,25 @@ def utcnow():
     return datetime.now(timezone.utc)
 
 
+def posicoes_por_nota(pares: list) -> list:
+    """[(item, nota)] -> [(posicao, item, nota)], da maior nota para a menor.
+
+    Empate fica na mesma posição. Renumera SEMPRE a partir de 1 dentro do que
+    recebeu: é isso que faz um recorte (só veteranos, só os membros de um
+    grupo) mostrar "1º" para o primeiro do recorte, em vez de arrastar a
+    posição que a pessoa tinha na lista inteira.
+
+    Vive solto aqui porque o ranking da turma e o placar do grupo usam a mesma
+    regra — duplicar significaria os dois divergirem no primeiro empate."""
+    pares = sorted(pares, key=lambda par: -par[1])
+    saida, anterior, posicao = [], None, 0
+    for indice, (item, nota) in enumerate(pares, start=1):
+        if nota != anterior:
+            posicao, anterior = indice, nota
+        saida.append((posicao, item, nota))
+    return saida
+
+
 class Materia(enum.Enum):
     MATEMATICA = "Matemática"
     FISICA = "Física"
@@ -498,14 +517,7 @@ class SimuladoTurma(db.Model):
             nota = self.nota_de(linha, materias)
             if nota is not None:
                 pares.append((linha, nota))
-        pares.sort(key=lambda p: -p[1])
-
-        saida, anterior, posicao = [], None, 0
-        for indice, (linha, nota) in enumerate(pares, start=1):
-            if nota != anterior:
-                posicao, anterior = indice, nota
-            saida.append((posicao, linha, nota))
-        return saida
+        return posicoes_por_nota(pares)
 
     def __repr__(self):
         return f"<SimuladoTurma {self.nome} {self.data}>"
@@ -792,6 +804,10 @@ class Grupo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(60), nullable=False)
     criado_por = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    # Placar de notas entre os membros. Default False de propósito: comparar
+    # nota é mais exposto que comparar volume de questões, então quem já tem
+    # grupo não passa a ver placar sem o dono pedir.
+    mostrar_ranking = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
 
     dono = db.relationship("User", foreign_keys=[criado_por])

@@ -13,7 +13,14 @@ Tudo aqui é leitura pura; nada grava no banco."""
 from datetime import date, timedelta
 
 from .extensions import db
-from .models import Grupo, GrupoMembro, RegistroEstudo, Simulado, User
+from .models import (
+    Grupo,
+    GrupoMembro,
+    RegistroEstudo,
+    Simulado,
+    User,
+    posicoes_por_nota,
+)
 
 PERIODOS = ("semana", "30dias")
 
@@ -98,4 +105,78 @@ def evolucao_do_grupo(grupo: "Grupo", periodo: str | None, materias=None) -> dic
         "fim": fim.isoformat(),
         "membros": membros,
         "placar": placar,
+    }
+
+
+def nota_do_simulado(simulado: "Simulado", materias=None) -> float | None:
+    """Nota de UM simulado nas matérias escolhidas, escala 0–10.
+
+    Mesma conta do ranking da turma (`SimuladoTurma.nota_de`): proporcional às
+    questões, não média simples dos percentuais — no IME as matérias têm pesos
+    diferentes e a média simples daria outro número.
+
+    Simulado digitado à mão pode não ter detalhamento por matéria, só a
+    `nota_geral`. Sem filtro de matéria, ela serve; COM filtro, não dá para
+    honrar o recorte e a prova fica de fora — melhor omitir do que responder
+    uma pergunta diferente da que foi feita.
+    """
+    soma_acertos = soma_questoes = 0
+    for materia in simulado.materias:
+        if materias and materia.materia not in materias:
+            continue
+        soma_acertos += materia.acertos
+        soma_questoes += materia.total_questoes
+
+    if soma_questoes:
+        return round(10.0 * soma_acertos / soma_questoes, 2)
+    if materias:
+        return None
+    return simulado.nota_geral
+
+
+def ranking_de_notas(grupo: "Grupo", periodo: str | None, materias=None) -> dict:
+    """Placar de notas dos membros ativos — só quando o dono liga (Grupo.mostrar_ranking).
+
+    Respeita o mesmo período e o mesmo filtro de matérias do resto da tela. A
+    posição sai de `posicoes_por_nota`, a mesma função do ranking da turma, que
+    renumera do 1º dentro do recorte e mantém empate na mesma posição.
+
+    Quem não fez simulado no período não entra no placar (não há nota para
+    comparar) e volta separado em `sem_nota`, para a tela poder dizer isso em
+    vez de simplesmente sumir com a pessoa.
+    """
+    inicio, fim = intervalo_do_periodo(periodo)
+
+    com_nota, sem_nota = [], []
+    for vinculo in membros_ativos(grupo):
+        simulados = db.session.scalars(
+            db.select(Simulado).filter(
+                Simulado.user_id == vinculo.user_id,
+                Simulado.data_simulado >= inicio,
+                Simulado.data_simulado <= fim,
+            )
+        ).all()
+
+        notas = [n for n in (nota_do_simulado(s, materias) for s in simulados) if n is not None]
+        pessoa = {
+            "user_id": vinculo.user_id,
+            "username": vinculo.user.username,
+            "nome": vinculo.user.nome_oficial or vinculo.user.username,
+            "simulados": len(notas),
+        }
+        if notas:
+            pessoa["media"] = round(sum(notas) / len(notas), 2)
+            pessoa["melhor"] = max(notas)
+            com_nota.append((pessoa, pessoa["media"]))
+        else:
+            sem_nota.append(pessoa)
+
+    return {
+        "inicio": inicio.isoformat(),
+        "fim": fim.isoformat(),
+        "placar": [
+            {**pessoa, "posicao": posicao}
+            for posicao, pessoa, _ in posicoes_por_nota(com_nota)
+        ],
+        "sem_nota": sorted(sem_nota, key=lambda p: p["username"]),
     }

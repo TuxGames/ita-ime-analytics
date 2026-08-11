@@ -15,7 +15,17 @@
       {{ form.nome(class="input" + (" input-error" if form.nome.errors else ""), maxlength="60") }}
       {% for e in form.nome.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
     </div>
-    <button type="submit" class="btn btn-primary btn-block">Salvar nome</button>
+    <div class="form-group">
+      <label class="check-linha">
+        {{ form.mostrar_ranking() }}
+        <span>{{ form.mostrar_ranking.label.text }}</span>
+      </label>
+      <p class="card-sub">
+        Desligado, o grupo mostra só evolução e volume de questões. Ligado, os
+        membros passam a ver a média de nota uns dos outros no período escolhido.
+      </p>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Salvar</button>
   </form>
 </section>
 

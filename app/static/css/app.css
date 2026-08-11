@@ -896,3 +896,27 @@ code { background: var(--blue-soft); padding: 1px 6px; border-radius: 6px; font-
 /* Nome com monograma ao lado, o arranjo usado nas listas de gente. */
 .pessoa { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .pessoa > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Checkbox solto numa linha (opções do grupo). Mesma caixa das .check-list,
+   mas ocupando a largura toda, já que aqui é uma opção só. */
+.check-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.check-linha:has(input:checked) { border-color: var(--blue); background: var(--blue-soft); }
+
+/* Placar de notas do grupo (aparece só quando o dono liga). */
+.placar-notas { list-style: none; margin: 0; padding: 0; }
+.placar-notas li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.placar-notas li:last-child { border-bottom: 0; }
+.placar-pos { font-weight: 800; color: var(--red); font-size: 15px; flex-shrink: 0; min-width: 28px; }
+.placar-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.placar-media { font-weight: 700; font-size: 16px; color: var(--blue); flex-shrink: 0; }
+.placar-detalhe { font-size: 12px; color: var(--muted); flex-shrink: 0; }

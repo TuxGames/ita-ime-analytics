@@ -426,6 +426,14 @@ class GrupoForm(FlaskForm):
     )
 
 
+class GrupoEdicaoForm(GrupoForm):
+    """Edição do grupo: o mesmo nome da criação, mais o que só faz sentido
+    depois que o grupo existe. Herda de GrupoForm para a validação do nome ser
+    literalmente a mesma, não uma cópia que pode divergir."""
+
+    mostrar_ranking = BooleanField("Mostrar placar de notas entre os membros")
+
+
 class ConvidarMembroForm(FlaskForm):
     """Convite por username — membro é usuário com conta, nunca Aluno."""
 

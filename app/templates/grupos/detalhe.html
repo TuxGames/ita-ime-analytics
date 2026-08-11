@@ -59,6 +59,37 @@
 <script type="application/json" id="grupo-evolucao-data">{{ dados_js|tojson }}</script>
 {% endif %}
 
+{% if notas %}
+<section class="card">
+  <h2 class="card-title">Placar de notas</h2>
+  <p class="card-sub">
+    Média das notas dos simulados de {{ notas.inicio|replace("-", "/") }} a
+    {{ notas.fim|replace("-", "/") }}, no mesmo recorte de matérias da tela.
+    A posição é renumerada dentro do grupo.
+  </p>
+  {% if notas.placar %}
+  <ul class="placar-notas">
+    {% for p in notas.placar %}
+    <li>
+      <span class="placar-pos">{{ p.posicao }}º</span>
+      {{ monograma(p.nome, "sm") }}
+      <span class="placar-nome">{{ p.username }}</span>
+      <span class="placar-detalhe">{{ p.simulados }} sim.</span>
+      <span class="placar-media">{{ "%.2f"|format(p.media) }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="card-sub">Ninguém do grupo tem simulado nesse período.</p>
+  {% endif %}
+  {% if notas.sem_nota %}
+  <p class="card-sub">
+    Sem simulado no período: {{ notas.sem_nota|map(attribute="username")|join(", ") }}.
+  </p>
+  {% endif %}
+</section>
+{% endif %}
+
 <section class="card">
   <h2 class="card-title">Membros</h2>
   <ul class="of-simples">
