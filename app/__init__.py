@@ -65,6 +65,10 @@ def create_app(config_class=Config) -> Flask:
     app.jinja_env.globals["iniciais_do_nome"] = iniciais
     app.jinja_env.globals["cor_do_nome"] = indice_de_cor
 
+    from .versao import VERSAO
+
+    app.jinja_env.globals["VERSAO"] = VERSAO
+
     from .security import register_security_headers
 
     register_security_headers(app)

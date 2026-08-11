@@ -920,3 +920,8 @@ code { background: var(--blue-soft); padding: 1px 6px; border-radius: 6px; font-
 .placar-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .placar-media { font-weight: 700; font-size: 16px; color: var(--blue); flex-shrink: 0; }
 .placar-detalhe { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+
+/* Rodapé com a versão. Discreto: é informação de manutenção, não de uso. */
+.rodape { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; }
+.rodape p { margin: 0; font-size: 12px; color: var(--muted); }
+.rodape-versao { font-variant-numeric: tabular-nums; }

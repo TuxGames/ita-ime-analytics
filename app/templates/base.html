@@ -40,6 +40,12 @@
     {% endif %}
   {% endwith %}
   {% block content %}{% endblock %}
+
+  {# Dentro do .content de propósito: ele já reserva o espaço da bottomnav
+     fixa, então o rodapé não fica escondido atrás dela no celular. #}
+  <footer class="rodape">
+    <p>ITA·IME Analytics <span class="rodape-versao">v{{ VERSAO }}</span></p>
+  </footer>
 </main>
 
 {% if current_user.is_authenticated %}
