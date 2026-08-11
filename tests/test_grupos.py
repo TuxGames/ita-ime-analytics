@@ -128,9 +128,22 @@ def test_rota_detalhe_grupo_nao_expoe_tempo(app, db, admin, criar_usuario, clien
 # --------------------------------------------------------------------------
 
 
+def _dias_atras_na_semana() -> int:
+    """Offset que cai dentro da semana-calendário atual (desta segunda até hoje).
+
+    A janela "semana" é semana-calendário de propósito (ver
+    `app.grupo_evolucao.intervalo_do_periodo`). Toda segunda-feira a semana só
+    tem o próprio dia, então "1 dia atrás" era domingo — semana passada — e o
+    teste quebrava sozinho uma vez por semana. Segunda vira 0, resto do tempo 1.
+    """
+    return min(1, date.today().weekday())
+
+
 def test_trocar_periodo_muda_numeros(app, db, admin, criar_usuario):
     grupo = _criar_grupo(db, admin)
-    _registro(db, admin, dias_atras=1, questoes=5)  # dentro da semana e dos 30 dias
+    # Nunca 20: a semana tem no máximo 7 dias, então 20 fica sempre fora dela
+    # e sempre dentro dos 30 dias, em qualquer dia em que a suíte rode.
+    _registro(db, admin, dias_atras=_dias_atras_na_semana(), questoes=5)
     _registro(db, admin, dias_atras=20, questoes=8)  # fora da semana, dentro de 30 dias
 
     semana = evolucao_do_grupo(grupo, "semana")
