@@ -6,7 +6,20 @@ from app.versao import VERSAO
 
 
 def test_formato_da_versao():
-    assert re.fullmatch(r"\d+\.\d+(\.\d+)?", VERSAO), "esperado 'maior.menor' ou 'maior.menor.correcao'"
+    """`x.y.NN` — o terceiro componente tem SEMPRE dois dígitos."""
+    assert re.fullmatch(r"\d+\.\d+\.\d{2}", VERSAO), f"esperado x.y.NN, veio {VERSAO!r}"
+
+
+def test_correcao_ordena_como_texto():
+    """O zero à esquerda existe para a versão ordenar certo como string.
+
+    Sem ele, "2.3.2" > "2.3.18" alfabeticamente, e é assim que versão acaba
+    sendo comparada em nome de arquivo, log e listagem.
+    """
+    maior, menor, _ = VERSAO.split(".")
+    versoes = [f"{maior}.{menor}.{n:02d}" for n in (0, 2, 9, 10, 18, 99)]
+
+    assert sorted(versoes) == versoes, "ordenação alfabética tem que bater com a numérica"
 
 
 def test_constante_e_unica():
