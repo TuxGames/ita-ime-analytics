@@ -465,3 +465,6 @@ select.input-board option { color: var(--text); background: #fff; }
 .auth-logo { color: #fff; font-size: 30px; letter-spacing: -0.5px; }
 .auth-sub { color: var(--board-muted); margin-top: 6px; }
 .auth-card { padding: 20px 18px; }
+
+/* Ação principal dentro da superfície escura (raiz de seção). */
+.board-acao { margin-top: 18px; }

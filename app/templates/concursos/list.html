@@ -1,13 +1,20 @@
 {% extends "base.html" %}
+{% from "_macros.html" import monograma %}
 {% block title %}Concursos — ITA-IME Analytics{% endblock %}
 
 {% block content %}
-<div class="page-head">
-  <h1>Concursos</h1>
+<section class="board" aria-label="Concursos">
+  <div class="board-top">
+    <div>
+      <h1 class="board-title">Concursos</h1>
+      <p class="board-sub">As provas que a turma está mirando, e quanto falta para cada uma.</p>
+    </div>
+    {{ monograma(current_user.nome_oficial or current_user.username, "md") }}
+  </div>
   {% if current_user.is_admin %}
-  <a class="btn btn-primary btn-sm" href="{{ url_for('concursos.novo') }}">+ Novo</a>
+  <a class="btn btn-live btn-block board-acao" href="{{ url_for('concursos.novo') }}">+ Novo concurso</a>
   {% endif %}
-</div>
+</section>
 
 {% if not total %}
 <section class="card empty-state">

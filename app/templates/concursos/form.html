@@ -5,9 +5,14 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ titulo }}</h1>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('concursos.listar') }}">Voltar</a>
 </div>
 
-<div class="card">
+<section class="card">
+  <p class="card-sub">
+    Banca e etapa formam o nome do concurso ("ITA 2027 - 2ª Fase"). É por esse par
+    que o ranking da turma é casado na sincronização.
+  </p>
   <form method="post" novalidate>
     {{ form.hidden_tag() }}
     {{ field(form.banca, placeholder="ex.: ITA 2027", list="bancas-existentes", autocomplete="off") }}
@@ -33,5 +38,5 @@
 
     <button type="submit" class="btn btn-primary btn-block">Salvar</button>
   </form>
-</div>
+</section>
 {% endblock %}
