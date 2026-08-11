@@ -1,13 +1,23 @@
 {% extends "base.html" %}
+{% from "_macros.html" import monograma %}
 {% block title %}Turmas — ITA-IME Analytics{% endblock %}
 
 {% block content %}
-<div class="page-head">
-  <div>
-    <h1>Turmas</h1>
-    <p class="page-sub">{{ total_alunos }} aluno(s) no total</p>
+<section class="board" aria-label="Administração de turmas">
+  <div class="board-top">
+    <div>
+      <h1 class="board-title">Turmas</h1>
+      <p class="board-sub">Os alunos aparecem sozinhos conforme os rankings são importados.</p>
+    </div>
+    {{ monograma(current_user.nome_oficial or current_user.username, "md") }}
   </div>
-</div>
+  <div class="board-cells">
+    <div class="board-cell">
+      <p class="board-value">{{ total_alunos }}</p>
+      <p class="board-label">alunos<span class="board-scope">no total</span></p>
+    </div>
+  </div>
+</section>
 
 {% if candidatos %}
 <section class="card info-card">
