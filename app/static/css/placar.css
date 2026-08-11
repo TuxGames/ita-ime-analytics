@@ -468,3 +468,13 @@ select.input-board option { color: var(--text); background: #fff; }
 
 /* Ação principal dentro da superfície escura (raiz de seção). */
 .board-acao { margin-top: 18px; }
+
+/* ---------- Cartões de grupo ---------- */
+
+.grupo-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-decoration: none; color: inherit; }
+.grupo-nome { margin: 0; font-size: 19px; font-weight: 700; color: var(--text); }
+.grupo-kicker { margin: 5px 0 0; font-size: 12.5px; color: var(--muted); }
+.grupo-card .chev { color: var(--faint); font-size: 22px; line-height: 1; }
+
+/* Monograma grande centralizado no estado vazio (convite). */
+.empty-state .mono-lg { margin: 0 auto 6px; }

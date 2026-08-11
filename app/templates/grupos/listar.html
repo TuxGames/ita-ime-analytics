@@ -1,11 +1,18 @@
 {% extends "base.html" %}
+{% from "_macros.html" import monograma %}
 {% block title %}Meus grupos — ITA-IME Analytics{% endblock %}
 
 {% block content %}
-<div class="page-head">
-  <h1>Meus grupos</h1>
-  <a class="btn btn-primary btn-sm" href="{{ url_for('grupos.novo') }}">+ Novo grupo</a>
-</div>
+<section class="board" aria-label="Meus grupos">
+  <div class="board-top">
+    <div>
+      <h1 class="board-title">Grupos</h1>
+      <p class="board-sub">Quem está estudando quanto — questões e simulados, nunca tempo.</p>
+    </div>
+    {{ monograma(current_user.nome_oficial or current_user.username, "md") }}
+  </div>
+  <a class="btn btn-live btn-block board-acao" href="{{ url_for('grupos.novo') }}">+ Novo grupo</a>
+</section>
 
 {% if not vinculos %}
 <section class="card empty-state">
@@ -19,9 +26,9 @@
   <li>
     {% if v.status == "convidado" %}
     <div class="card">
-      <p class="sim-concurso">Convite pendente</p>
-      <p class="sim-nota-value">{{ v.grupo.nome }}</p>
-      <div class="form-actions" style="margin-top:10px;">
+      <p class="grupo-kicker">Convite pendente</p>
+      <p class="grupo-nome">{{ v.grupo.nome }}</p>
+      <div class="form-actions">
         <form method="post" action="{{ url_for('grupos.aceitar', grupo_id=v.grupo.id) }}" class="inline-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-primary btn-sm">Aceitar</button>
@@ -33,9 +40,12 @@
       </div>
     </div>
     {% else %}
-    <a class="card sim-card" href="{{ url_for('grupos.detalhe', grupo_id=v.grupo.id) }}">
-      <p class="sim-nota-value">{{ v.grupo.nome }}</p>
-      <p class="sim-concurso">{% if v.grupo.criado_por == current_user.id %}você é dono{% else %}membro{% endif %}</p>
+    <a class="card grupo-card" href="{{ url_for('grupos.detalhe', grupo_id=v.grupo.id) }}">
+      <div>
+        <p class="grupo-nome">{{ v.grupo.nome }}</p>
+        <p class="grupo-kicker">{% if v.grupo.criado_por == current_user.id %}você é dono{% else %}membro{% endif %}</p>
+      </div>
+      <span class="chev" aria-hidden="true">›</span>
     </a>
     {% endif %}
   </li>

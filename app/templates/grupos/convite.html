@@ -1,13 +1,15 @@
 {% extends "base.html" %}
+{% from "_macros.html" import monograma %}
 {% block title %}Convite — {{ grupo.nome }} — ITA-IME Analytics{% endblock %}
 
 {% block content %}
 <div class="page-head">
-  <h1>Convite para "{{ grupo.nome }}"</h1>
+  <h1>Convite</h1>
 </div>
 
 <section class="card empty-state">
-  <h2>{{ grupo.dono.username }} te convidou</h2>
+  {{ monograma(grupo.dono.nome_oficial or grupo.dono.username, "lg") }}
+  <h2>{{ grupo.dono.username }} te convidou para "{{ grupo.nome }}"</h2>
   <p>
     Aceitando, seus colegas passam a ver quantas questões você fez (com acerto) e
     quantos simulados fez, por período — nunca o tempo de estudo. Antes de aceitar,

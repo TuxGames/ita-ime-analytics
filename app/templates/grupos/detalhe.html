@@ -8,6 +8,7 @@
     <h1>{{ grupo.nome }}</h1>
     <p class="page-sub">{{ dados_js.inicio }} a {{ dados_js.fim }}</p>
   </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('grupos.listar') }}">Voltar</a>
 </div>
 
 <nav class="filtro-turma" aria-label="Filtrar por período">
@@ -45,6 +46,10 @@
       <tbody>
         {% for m in dados_js.placar %}
         <tr>
+          {# Sem monograma aqui de propósito: `dados_js.placar` só carrega o
+             username, e o monograma derivado dele daria uma cor diferente da
+             que a mesma pessoa tem na lista de Membros logo abaixo. Preferi
+             não ter monograma a ter dois. #}
           <td>{{ m.username }}{% if m.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</td>
           <td>{{ m.questoes_totais }}</td>
           <td>{% if m.percentual_acerto is not none %}{{ "%.1f"|format(m.percentual_acerto) }}%{% else %}—{% endif %}</td>
