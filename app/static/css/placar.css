@@ -464,3 +464,13 @@ select.input-board option { color: var(--text); background: #fff; }
 
 /* Monograma grande centralizado no estado vazio (convite). */
 .empty-state .mono-lg { margin: 0 auto 6px; }
+
+/* ---------- Diferenças na ressincronização (de -> para) ---------- */
+
+.difs { list-style: none; margin: 12px 0 0; padding: 0; }
+.dif { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; border-bottom: 1px solid #EDEFF2; font-size: 13.5px; }
+.dif:last-child { border-bottom: 0; }
+.dif-campo { flex: 1; min-width: 0; font-weight: 600; color: var(--text); }
+.dif-de { color: var(--muted); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+.dif-seta { color: var(--faint); }
+.dif-para { font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; }

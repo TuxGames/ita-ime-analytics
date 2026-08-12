@@ -47,6 +47,10 @@
 {% endif %}
 
 <div class="form-actions">
+  <a class="btn btn-outline btn-block" href="{{ url_for('simulados.ressincronizar') }}">Atualizar simulados já trazidos</a>
+</div>
+
+<div class="form-actions">
   <a class="btn btn-ghost btn-block" href="{{ url_for('simulados.listar') }}">Voltar</a>
 </div>
 {% endblock %}

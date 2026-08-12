@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Atualizar simulados — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Atualizar simulados</h1>
+    <p class="page-sub">
+      Quando o ranking da turma é corrigido depois que você já trouxe a prova.
+    </p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('simulados.listar') }}">Voltar</a>
+</div>
+
+{% if not itens %}
+<section class="card empty-state">
+  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+  <h2>Tudo em dia</h2>
+  <p>
+    Nenhum simulado seu ficou diferente do ranking de origem. Se um ranking for
+    corrigido depois, é aqui que a diferença aparece.
+  </p>
+  <a class="btn btn-outline" href="{{ url_for('simulados.sincronizar') }}">Ir para Sincronizar</a>
+</section>
+{% else %}
+
+<section class="card info-card">
+  <p>
+    <strong>Isto altera simulados que já estão no seu perfil</strong> — é diferente
+    de “Sincronizar”, que só acrescenta o que falta. Marque o que quer atualizar;
+    o que não for marcado fica como está. Sua <strong>observação</strong> em cada
+    simulado é preservada nos dois casos.
+  </p>
+</section>
+
+<form method="post" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <ul class="cards-list">
+    {% for item in itens %}
+    {% set s = item.simulado %}
+    <li>
+      <section class="card">
+        <label class="check-linha">
+          <input type="checkbox" name="sim_{{ s.id }}" value="y" checked>
+          <span>
+            <strong>{{ s.titulo_curto }}</strong> ·
+            {{ s.data_simulado.strftime("%d/%m/%Y") }}
+            {%- if s.concurso %} · {{ s.concurso.nome }}{% endif %}
+          </span>
+        </label>
+        <ul class="difs">
+          {% for m in item.mudancas %}
+          <li class="dif">
+            <span class="dif-campo">{{ m.campo }}</span>
+            <span class="dif-de">{{ m.de if m.de is not none else "—" }}</span>
+            <span class="dif-seta" aria-hidden="true">→</span>
+            <span class="dif-para">{{ m.para if m.para is not none else "—" }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary btn-block">Atualizar os marcados</button>
+    <a class="btn btn-ghost btn-block" href="{{ url_for('simulados.listar') }}">Cancelar</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

@@ -34,7 +34,13 @@ from ..models import (
     utcnow,
 )
 from ..oficiais_import import ErroImport, materias_da_query
-from ..simulado_sync import linhas_pendentes, opcoes_de_concurso, sincronizar_linha
+from ..simulado_sync import (
+    linhas_pendentes,
+    opcoes_de_concurso,
+    ressincronizar_simulado,
+    simulados_desatualizados,
+    sincronizar_linha,
+)
 from ..simulado_turma_import import aplicar as aplicar_turma
 from ..simulado_turma_import import parse as parse_turma
 from ..validacao import (
@@ -292,6 +298,35 @@ def sincronizar():
             }
         )
     return render_template("simulados/sincronizar.html", itens=itens)
+
+
+@simulados_bp.route("/ressincronizar", methods=["GET", "POST"])
+@login_required
+def ressincronizar():
+    """Atualiza simulados JÁ trazidos cuja linha de origem foi corrigida depois.
+
+    Diferente de `sincronizar`, que só adiciona: aqui se mexe em registro que
+    já está no perfil da pessoa. Por isso o preview é obrigatório — o GET
+    mostra campo a campo o que muda, e o POST grava só o que foi marcado.
+    """
+    pendentes = simulados_desatualizados(current_user.id)
+
+    if request.method == "POST":
+        atualizados = 0
+        for item in pendentes:
+            simulado = item["simulado"]
+            if not request.form.get(f"sim_{simulado.id}"):
+                continue
+            if ressincronizar_simulado(simulado):
+                atualizados += 1
+        db.session.commit()
+        if atualizados:
+            flash(f"{atualizados} simulado(s) atualizado(s) a partir do ranking.", "success")
+        else:
+            flash("Nada marcado — nenhum simulado foi alterado.", "info")
+        return redirect(url_for("simulados.listar"))
+
+    return render_template("simulados/ressincronizar.html", itens=pendentes)
 
 
 # --------------------------------------------------------------------------
