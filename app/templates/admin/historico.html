@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Histórico de imports — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Histórico de imports</h1>
+    <p class="page-sub">{{ itens|length }} import(s) aplicado(s)</p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.turmas') }}">Voltar</a>
+</div>
+
+{% if not itens %}
+<section class="card empty-state">
+  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+  <h2>Nenhum import registrado</h2>
+  <p>Cada listão ou ranking aplicado passa a aparecer aqui, com o JSON original.</p>
+</section>
+{% else %}
+
+<section class="card info-card">
+  <p>
+    O JSON original de cada import fica guardado para <strong>comparar e
+    reaplicar à mão</strong> se algo sair errado. Não existe desfazer por aqui:
+    reverter um import é caso a caso e mexeria em dado de todo mundo.
+  </p>
+</section>
+
+<ul class="cards-list">
+  {% for item in itens %}
+  {% set r = item.registro %}
+  <li>
+    <a class="card hist-card" href="{{ url_for('admin.historico_detalhe', historico_id=r.id) }}">
+      <div class="hist-topo">
+        <span class="chip {{ 'chip-forte' if r.tipo == 'oficial' }}">{{ r.tipo }}</span>
+        <span class="hist-data">{{ r.created_at.strftime("%d/%m/%Y %H:%M") }}</span>
+      </div>
+      <p class="hist-alvo">{{ r.alvo }}</p>
+      <p class="hist-meta">
+        por {{ r.criador.username if r.criador else "—" }}
+        · {{ (item.tamanho / 1024)|round(1) }} KB de JSON
+      </p>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

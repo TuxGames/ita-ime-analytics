@@ -6,7 +6,18 @@ duplicatas nascem junto; sem uma tela para juntá-las, a lista de turma nasce
 errada. Por isso merge faz parte da mesma entrega, e não de um "depois".
 """
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+import json
+
+from flask import (
+    Blueprint,
+    Response,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from ..alunos import (
     ErroMerge,
@@ -25,6 +36,7 @@ from ..models import (
     TURMAS,
     Aluno,
     AlunoApelido,
+    HistoricoImport,
     ResultadoLinha,
     SimuladoTurmaLinha,
     normalizar_nome,
@@ -237,4 +249,76 @@ def merge():
         "admin/merge.html",
         pares=pares,
         todos=db.session.scalars(db.select(Aluno).order_by(Aluno.nome)).all(),
+    )
+
+
+# --------------------------------------------------------------------------
+# Histórico de import — só leitura.
+# --------------------------------------------------------------------------
+#
+# A tabela era só de escrita: gravava todo import aplicado e ninguém nunca via.
+# Aqui ela vira tela, para comparar o que foi enviado com o que ficou gravado
+# e, se preciso, reaplicar À MÃO. Não existe rollback e não é o objetivo:
+# desfazer import é caso a caso e mexeria em dado de todo mundo.
+
+# JSON acima disto não vai inteiro para a tela: só o começo, mais o botão de
+# baixar. Sem o corte, um listão grande trava o navegador do celular.
+LIMITE_JSON_NA_TELA = 100_000
+
+
+@admin_bp.route("/historico")
+@admin_required
+def historico():
+    """Lista dos imports aplicados, mais recente primeiro.
+
+    Sem o JSON: só o tamanho dele. Despejar o payload aqui deixaria a listagem
+    com megabytes.
+    """
+    registros = db.session.scalars(
+        db.select(HistoricoImport).order_by(HistoricoImport.created_at.desc())
+    ).all()
+    itens = [
+        {"registro": r, "tamanho": len(r.payload_json or "")} for r in registros
+    ]
+    return render_template("admin/historico.html", itens=itens)
+
+
+def _get_historico(historico_id: int) -> "HistoricoImport":
+    registro = db.session.get(HistoricoImport, historico_id)
+    if registro is None:
+        abort(404)
+    return registro
+
+
+@admin_bp.route("/historico/<int:historico_id>")
+@admin_required
+def historico_detalhe(historico_id):
+    """O JSON cru, indentado para leitura. Se não for JSON válido, mostra como veio."""
+    registro = _get_historico(historico_id)
+    bruto = registro.payload_json or ""
+    try:
+        formatado = json.dumps(json.loads(bruto), indent=2, ensure_ascii=False, sort_keys=False)
+    except (ValueError, TypeError):
+        formatado = bruto
+
+    cortado = len(formatado) > LIMITE_JSON_NA_TELA
+    return render_template(
+        "admin/historico_detalhe.html",
+        registro=registro,
+        conteudo=formatado[:LIMITE_JSON_NA_TELA] if cortado else formatado,
+        cortado=cortado,
+        tamanho=len(bruto),
+    )
+
+
+@admin_bp.route("/historico/<int:historico_id>/baixar")
+@admin_required
+def historico_baixar(historico_id):
+    """Baixa o payload original, sem reformatar — é o que foi enviado."""
+    registro = _get_historico(historico_id)
+    nome = f"import-{registro.tipo}-{registro.id}.json"
+    return Response(
+        registro.payload_json or "",
+        mimetype="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{nome}"'},
     )

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ registro.alvo }} — Histórico — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ registro.alvo }}</h1>
+    <p class="page-sub">
+      {{ registro.tipo }}
+      · {{ registro.created_at.strftime("%d/%m/%Y %H:%M") }}
+      · por {{ registro.criador.username if registro.criador else "—" }}
+    </p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.historico') }}">Voltar</a>
+</div>
+
+<div class="form-actions">
+  <a class="btn btn-outline btn-block"
+     href="{{ url_for('admin.historico_baixar', historico_id=registro.id) }}">
+    Baixar JSON original ({{ (tamanho / 1024)|round(1) }} KB)
+  </a>
+</div>
+
+{% if cortado %}
+<section class="card info-card">
+  <p>
+    O JSON é grande demais para caber na tela sem travar o navegador. Abaixo
+    está só o começo — <strong>baixe o arquivo</strong> para ver inteiro.
+  </p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2 class="card-title">JSON enviado</h2>
+  <p class="card-sub">
+    Exatamente o que foi colado no import, apenas indentado para leitura.
+  </p>
+  <pre class="json-cru"><code>{{ conteudo }}</code></pre>
+</section>
+{% endblock %}

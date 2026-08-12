@@ -474,3 +474,27 @@ select.input-board option { color: var(--text); background: #fff; }
 .dif-de { color: var(--muted); text-decoration: line-through; font-variant-numeric: tabular-nums; }
 .dif-seta { color: var(--faint); }
 .dif-para { font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; }
+
+/* ---------- Histórico de import ---------- */
+
+.hist-card { display: block; text-decoration: none; color: inherit; }
+.hist-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hist-data { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.hist-alvo { margin: 10px 0 0; font-size: 15.5px; font-weight: 700; color: var(--text); }
+.hist-meta { margin: 5px 0 0; font-size: 12.5px; color: var(--muted); }
+
+/* JSON cru: rola dentro do próprio bloco, nunca faz a página rolar na horizontal. */
+.json-cru {
+  margin: 0;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--board);
+  color: #D7E1EE;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-overflow-scrolling: touch;
+}
+.json-cru code { white-space: pre; }
