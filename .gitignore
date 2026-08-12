@@ -8,3 +8,6 @@ venv/
 *.sqlite3
 .pytest_cache/
 *.zip
+
+# Copias de repositorio deixadas por agente (dezenas de MB, com .venv dentro).
+.claude/worktrees/

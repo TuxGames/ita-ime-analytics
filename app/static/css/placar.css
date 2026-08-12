@@ -330,20 +330,6 @@ select.input-board option { color: var(--text); background: #fff; }
 
 .perfil-board { display: flex; align-items: center; gap: 16px; }
 
-.perfil-avatar-big {
-  width: 66px;
-  height: 66px;
-  flex-shrink: 0;
-  border-radius: 20px;
-  background: var(--live);
-  color: #fff;
-  font-size: 30px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .perfil-board-nome { margin: 0; font-size: 20px; font-weight: 700; color: #fff; }
 .perfil-board-meta { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--board-muted); }
 
