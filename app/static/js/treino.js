@@ -23,6 +23,50 @@
   var mute = false;
   var tickTimer = null;
 
+  // ---------- Persistência da sessão ----------
+  // No celular o navegador DESCARTA a aba em segundo plano para liberar
+  // memória: a página é destruída e o estado em memória some. No desktop a aba
+  // sobrevive, por isso o bug só aparecia no telefone.
+  //
+  // Grava a cada mudança, e não só na saída: pode não haver saída. `beforeunload`
+  // é pouco confiável no móvel e muitas vezes nem dispara no descarte — os
+  // eventos que valem são `visibilitychange` indo para hidden e `pagehide`.
+  var KEY_SESSAO = "itaime:treino:sessao";
+
+  function salvarSessao() {
+    if (estado === "idle" && feitas === 0) { limparSessao(); return; }
+    // Congela o segmento em andamento: o snapshot vale até ESTE instante. Se a
+    // aba morrer agora, não dá para saber se a pessoa continuou trabalhando.
+    var congelado = accumMs + (estado === "running" ? Date.now() - segStart : 0);
+    var dados = {
+      v: 1,
+      feitas: feitas,
+      totalMs: totalMs,
+      accumMs: congelado,
+      budgetSec: budgetSec,
+      defaultSec: defaultSec,
+      alerted: alerted,
+      salvoEm: Date.now()
+    };
+    try { localStorage.setItem(KEY_SESSAO, JSON.stringify(dados)); } catch (e) { /* modo privado */ }
+  }
+
+  function lerSessao() {
+    var bruto = null;
+    try { bruto = localStorage.getItem(KEY_SESSAO); } catch (e) { return null; }
+    if (!bruto) return null;
+    try {
+      var d = JSON.parse(bruto);
+      if (!d || d.v !== 1) return null;
+      if (typeof d.feitas !== "number" || typeof d.totalMs !== "number") return null;
+      return d;
+    } catch (e) { return null; }
+  }
+
+  function limparSessao() {
+    try { localStorage.removeItem(KEY_SESSAO); } catch (e) { /* modo privado */ }
+  }
+
   // ---------- Áudio (Web Audio, sem arquivos) ----------
   var actx = null;
   function ctx() {
@@ -114,6 +158,7 @@
     setPausarLabel();
     startTick();
     render();
+    salvarSessao();
   }
 
   function registrar() {
@@ -140,6 +185,7 @@
     $("questao-info").textContent = "Questão " + (feitas + 1);
     setPausarLabel();
     render();
+    salvarSessao();
   }
 
   function pausar() {
@@ -152,6 +198,7 @@
     }
     setPausarLabel();
     render();
+    salvarSessao();
   }
   function setPausarLabel() {
     $("btn-pausar").textContent = estado === "paused" ? "Retomar" : "Pausar";
@@ -181,9 +228,11 @@
 
     mainBox.hidden = true;
     resumoBox.hidden = false;
+    limparSessao();  // concluído: não pode ressuscitar
   }
 
   function novaSessao() {
+    limparSessao();
     resumoBox.hidden = true;
     mainBox.hidden = false;
     estado = "idle";
@@ -240,14 +289,97 @@
   $("btn-nova").addEventListener("click", novaSessao);
   $("btn-mute").addEventListener("click", toggleMute);
 
+  // ---------- Retomada ----------
+  var retomarBox = $("treino-retomar");
+  // O retrato fica em memória: no arranque `novaSessao()` limpa o localStorage
+  // (é o comportamento certo dela), então reler no clique acharia vazio.
+  var pendenteSalvo = null;
+
+  function quandoTexto(ms) {
+    var min = Math.round((Date.now() - ms) / 60000);
+    if (min < 1) return "agora";
+    if (min < 60) return min + " min";
+    var h = Math.round(min / 60);
+    return h < 24 ? h + " h" : Math.round(h / 24) + " d";
+  }
+
+  function oferecerRetomada(d) {
+    pendenteSalvo = d;
+    $("retomar-feitas").textContent = String(d.feitas);
+    $("retomar-total").textContent = fmt(d.totalMs / 1000);
+    $("retomar-quando").textContent = quandoTexto(d.salvoEm);
+    setupBox.hidden = true;
+    mainBox.hidden = true;
+    resumoBox.hidden = true;
+    retomarBox.hidden = false;
+  }
+
+  function retomar() {
+    var d = pendenteSalvo;
+    if (!d) { retomarBox.hidden = true; novaSessao(); return; }
+    feitas = d.feitas;
+    totalMs = d.totalMs;
+    accumMs = d.accumMs;
+    budgetSec = d.budgetSec;
+    alerted = !!d.alerted;
+    // Volta PAUSADO: o snapshot vale até o último instante gravado, e não dá
+    // para saber se a pessoa seguiu resolvendo depois que a aba morreu. Contar
+    // o tempo em que o navegador esteve fechado seria inventar dado.
+    estado = "paused";
+    segStart = Date.now();
+
+    retomarBox.hidden = true;
+    mainBox.hidden = false;
+    $("btn-iniciar").hidden = true;
+    $("btn-registrar").hidden = false;
+    $("row-secundario").hidden = false;
+    $("feitas").textContent = String(feitas);
+    $("questao-info").textContent = "Questão " + (feitas + 1) + " (pausado)";
+    setPausarLabel();
+    startTick();
+    render();
+  }
+
+  function descartar() {
+    pendenteSalvo = null;
+    limparSessao();
+    retomarBox.hidden = true;
+    novaSessao();
+  }
+
+  // Grava quando a página sai de vista e no pagehide: é o último momento
+  // confiável antes de o navegador móvel descartar a aba. `beforeunload` não
+  // entra de propósito — no celular ele frequentemente não dispara.
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") salvarSessao();
+  });
+  window.addEventListener("pagehide", salvarSessao);
+
+  $("btn-retomar").addEventListener("click", retomar);
+  $("btn-descartar").addEventListener("click", descartar);
+
   // ---------- Início ----------
   var salvo = null;
   try { salvo = localStorage.getItem(KEY); } catch (e) { salvo = null; }
+  // Lê a sessão pendente ANTES de qualquer coisa: `novaSessao()` limpa o
+  // estado salvo (é o que se espera dela), e chamá-la primeiro apagaria
+  // justamente o treino que precisamos oferecer de volta.
+  var pendente = lerSessao();
+
   if (salvo && parseInt(salvo, 10) > 0) {
     defaultSec = parseInt(salvo, 10);
     $("padrao-label").textContent = fmt(defaultSec);
     novaSessao(); // mostra o painel principal, estado ocioso
   } else {
     mostrarSetup(false); // primeira vez: pede o tempo padrão
+  }
+
+  // Treino interrompido tem prioridade sobre tudo: é o que a pessoa perdeu.
+  if (pendente && (pendente.feitas > 0 || pendente.accumMs > 0)) {
+    if (pendente.defaultSec > 0) {
+      defaultSec = pendente.defaultSec;
+      $("padrao-label").textContent = fmt(defaultSec);
+    }
+    oferecerRetomada(pendente);
   }
 })();

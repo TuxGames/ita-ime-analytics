@@ -8,6 +8,33 @@
 </div>
 
 <section class="card">
+  {# ---- Treino interrompido: o navegador do celular descarta a aba em segundo
+         plano, então a sessão pode ter morrido sem ninguém encerrar. Nunca
+         restaura calado: mostra o que já foi feito e deixa a pessoa escolher. #}
+  <div id="treino-retomar" hidden>
+    <h2 class="card-title">Você tem um treino em andamento</h2>
+    <p class="card-sub">
+      Ele foi interrompido — provavelmente o navegador fechou a aba em segundo plano.
+      O que já estava registrado está aqui.
+    </p>
+    <div class="stats-grid stats-3">
+      <div class="stat">
+        <p class="stat-value" id="retomar-feitas">0</p>
+        <p class="stat-label">questões</p>
+      </div>
+      <div class="stat">
+        <p class="stat-value" id="retomar-total">00:00</p>
+        <p class="stat-label">tempo</p>
+      </div>
+      <div class="stat">
+        <p class="stat-value" id="retomar-quando">—</p>
+        <p class="stat-label">parou</p>
+      </div>
+    </div>
+    <button id="btn-retomar" class="btn btn-primary btn-block" type="button">Continuar este treino</button>
+    <button id="btn-descartar" class="btn btn-ghost btn-block" type="button">Começar outro</button>
+  </div>
+
   {# ---- Definir tempo padrão (primeira vez ou ao mudar) ---- #}
   <div id="treino-setup" hidden>
     <h2 class="card-title">Tempo por questão</h2>
@@ -32,7 +59,7 @@
       <p class="treino-info" id="questao-info">Pronto para começar</p>
     </div>
 
-    <div class="treino-stats">
+    <div class="stats-grid stats-3">
       <div><span id="feitas">0</span><small>feitas</small></div>
       <div><span id="tempo-total">00:00</span><small>tempo total</small></div>
       <div><span id="budget-atual">05:00</span><small>desta questão</small></div>
@@ -55,7 +82,7 @@
   {# ---- Resumo ao finalizar ---- #}
   <div id="treino-resumo" hidden>
     <h2 class="card-title">Sessão finalizada</h2>
-    <div class="treino-stats">
+    <div class="stats-grid stats-3">
       <div><span id="res-feitas">0</span><small>questões</small></div>
       <div><span id="res-total">00:00</span><small>tempo total</small></div>
       <div><span id="res-media">00:00</span><small>média/questão</small></div>
@@ -100,8 +127,10 @@
         </p>
         {% if s.observacao %}<p class="treino-hist-obs">{{ s.observacao }}</p>{% endif %}
       </div>
+      {# data-confirm (tratado em app.js) e não onsubmit inline: a CSP é 'self'
+         e bloqueia handler embutido, então a confirmação nunca chegava a rodar. #}
       <form method="post" action="{{ url_for('estudos.treino_excluir', sessao_id=s.id) }}"
-            onsubmit="return confirm('Excluir esta sessão?');">
+            data-confirm="Excluir esta sessão?">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn-icon-del" aria-label="Excluir sessão">×</button>
       </form>
