@@ -519,3 +519,7 @@ select.input-board option { color: var(--text); background: #fff; }
   letter-spacing: 1px;
   color: var(--blue);
 }
+
+/* Cronômetro pausado: o número para de correr, então precisa PARECER parado.
+   Antes o único sinal era o botão virar "Retomar". */
+.treino-parado { opacity: .55; }

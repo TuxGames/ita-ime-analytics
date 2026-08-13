@@ -185,8 +185,12 @@ def treino_salvar():
         )
         db.session.commit()
         flash("Sessão de treino salva!", "success")
-    else:
-        flash("Não foi possível salvar a sessão. Tente finalizar de novo.", "error")
+        # `salvo=1` avisa o treino.js que AGORA pode apagar o rascunho local.
+        # Antes o rascunho sumia no "Finalizar", e quem perdesse a aba entre
+        # finalizar e salvar (no celular, onde a aba morre) perdia o resumo.
+        return redirect(url_for("estudos.treino", salvo=1))
+
+    flash("Não foi possível salvar a sessão. Tente finalizar de novo.", "error")
     return redirect(url_for("estudos.treino"))
 
 

@@ -82,6 +82,15 @@
   {# ---- Resumo ao finalizar ---- #}
   <div id="treino-resumo" hidden>
     <h2 class="card-title">Sessão finalizada</h2>
+    {# Mostrado só quando havia uma questão em andamento ao finalizar. #}
+    <p class="card-sub" id="res-descartada" hidden>
+      A questão que estava em andamento <strong>não foi contada</strong> — o
+      total e a média consideram só as questões registradas.
+    </p>
+    <p class="card-sub" id="res-nao-salva" hidden>
+      Esta sessão <strong>ainda não foi salva</strong>. Ela fica guardada neste
+      aparelho até você salvar ou descartar.
+    </p>
     <div class="stats-grid stats-3">
       <div><span id="res-feitas">0</span><small>questões</small></div>
       <div><span id="res-total">00:00</span><small>tempo total</small></div>

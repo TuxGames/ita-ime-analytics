@@ -89,8 +89,50 @@ def test_beforeunload_continua_fora():
     assert not linhas_de_codigo, linhas_de_codigo
 
 
-def test_sessao_limpa_ao_concluir():
-    """Treino concluído não pode ressuscitar na próxima visita."""
+def test_finalizar_guarda_em_vez_de_apagar():
+    """Entre finalizar e salvar existe uma janela em que a aba morre no celular.
+    O rascunho tem que sobreviver a ela — antes `finalizar()` limpava na hora."""
     trecho = JS[JS.index("function finalizar()"):]
     trecho = trecho[: trecho.index("\n  function ")]
-    assert "limparSessao()" in trecho
+    assert "salvarSessao()" in trecho
+    assert "limparSessao()" not in trecho
+
+
+def test_so_limpa_depois_do_servidor_confirmar():
+    """`?salvo=1` é a confirmação de que a sessão chegou ao banco. Sem essa
+    porta, ou o rascunho some cedo demais ou ressuscita por cima do próximo."""
+    assert 'window.location.search.indexOf("salvo=1")' in JS
+
+
+def test_rota_de_salvar_sinaliza_sucesso():
+    rotas = (RAIZ / "app" / "estudos" / "routes.py").read_text(encoding="utf-8")
+    assert 'url_for("estudos.treino", salvo=1)' in rotas
+
+
+def test_nova_sessao_confirma_quando_ha_questoes():
+    trecho = JS[JS.index("function novaSessao("):]
+    trecho = trecho[: trecho.index("\n  function ")]
+    assert "window.confirm(" in trecho
+    assert "feitas > 0" in trecho
+
+
+def test_pausado_aparece_no_texto_e_na_marca():
+    trecho = JS[JS.index("function marcarPausado()"):]
+    trecho = trecho[: trecho.index("\n  function ")]
+    assert "· pausado" in trecho or "· pausado" in trecho
+    assert "classList.toggle" in trecho, "marca por classe, não style inline"
+
+
+def test_resumo_avisa_da_questao_descartada():
+    assert 'id="res-descartada"' in HTML
+    assert "não foi contada" in HTML
+    assert '$("res-descartada").hidden = !descartada;' in JS
+
+
+def test_resumo_restaurado_volta_a_ser_gravado():
+    """O arranque passa por novaSessao(), que limpa o localStorage. Sem regravar,
+    o resumo sobreviveria a UMA morte da aba e não à seguinte."""
+    trecho = JS[JS.index("function restaurarResumo(")]
+    trecho = JS[JS.index("function restaurarResumo("):]
+    trecho = trecho[: trecho.index("\n  function ")]
+    assert "salvarSessao()" in trecho

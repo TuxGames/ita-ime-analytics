@@ -22,6 +22,8 @@
   var alerted = false;  // já tocou o alerta de "acabou o tempo" nesta questão?
   var mute = false;
   var tickTimer = null;
+  var finalizado = false;  // encerrado, aguardando salvar ou descartar
+  var descartada = false;  // havia questão em andamento ao finalizar
 
   // ---------- Persistência da sessão ----------
   // No celular o navegador DESCARTA a aba em segundo plano para liberar
@@ -34,7 +36,7 @@
   var KEY_SESSAO = "itaime:treino:sessao";
 
   function salvarSessao() {
-    if (estado === "idle" && feitas === 0) { limparSessao(); return; }
+    if (estado === "idle" && feitas === 0 && !finalizado) { limparSessao(); return; }
     // Congela o segmento em andamento: o snapshot vale até ESTE instante. Se a
     // aba morrer agora, não dá para saber se a pessoa continuou trabalhando.
     var congelado = accumMs + (estado === "running" ? Date.now() - segStart : 0);
@@ -46,6 +48,10 @@
       budgetSec: budgetSec,
       defaultSec: defaultSec,
       alerted: alerted,
+      // Sessão encerrada mas ainda NÃO gravada no servidor. Fica guardada até
+      // o POST de salvar confirmar (ver `?salvo=1`) ou a pessoa descartar.
+      finalizado: finalizado,
+      descartada: descartada,
       salvoEm: Date.now()
     };
     try { localStorage.setItem(KEY_SESSAO, JSON.stringify(dados)); } catch (e) { /* modo privado */ }
@@ -150,6 +156,8 @@
     feitas = 0;
     totalMs = 0;
     alerted = false;
+    finalizado = false;
+    descartada = false;
     $("feitas").textContent = "0";
     $("questao-info").textContent = "Questão 1";
     $("btn-iniciar").hidden = true;
@@ -196,18 +204,31 @@
       segStart = Date.now();
       estado = "running";
     }
+    marcarPausado();
     setPausarLabel();
     render();
     salvarSessao();
   }
+  function marcarPausado() {
+    var pausado = estado === "paused";
+    var info = $("questao-info");
+    var base = "Questão " + (feitas + 1);
+    info.textContent = pausado ? base + " · pausado" : base;
+    // Classe, não style inline: a CSP bloqueia estilo embutido.
+    $("remaining").classList.toggle("treino-parado", pausado);
+  }
+
   function setPausarLabel() {
     $("btn-pausar").textContent = estado === "paused" ? "Retomar" : "Pausar";
   }
 
   function finalizar() {
     // A questão em andamento (não registrada) é descartada: o total e a média
-    // consideram só as questões efetivamente registradas.
+    // consideram só as questões efetivamente registradas. Agora isso é DITO na
+    // tela, em vez de acontecer em silêncio.
+    descartada = accumMs > 0 || estado === "running";
     estado = "idle";
+    finalizado = true;
     stopTick();
     var totalSec = Math.round(totalMs / 1000);
     $("res-feitas").textContent = String(feitas);
@@ -226,12 +247,26 @@
       }
     }
 
+    $("res-descartada").hidden = !descartada;
+    $("res-nao-salva").hidden = feitas === 0;
+
     mainBox.hidden = true;
     resumoBox.hidden = false;
-    limparSessao();  // concluído: não pode ressuscitar
+    // NÃO limpa aqui: entre finalizar e salvar existe uma janela em que a aba
+    // pode morrer (no celular, morre), e o resumo iria junto. Quem limpa é o
+    // retorno bem-sucedido do POST (`?salvo=1`) ou o descarte explícito.
+    salvarSessao();
   }
 
-  function novaSessao() {
+  function novaSessao(pedirConfirmacao) {
+    if (pedirConfirmacao && feitas > 0) {
+      // confirm() de arquivo externo passa na CSP; handler inline não passaria.
+      var aviso = "Descartar esta sessão com " + feitas +
+        " questão(ões) sem salvar? Isso não tem volta.";
+      if (!window.confirm(aviso)) return;
+    }
+    finalizado = false;
+    descartada = false;
     limparSessao();
     resumoBox.hidden = true;
     mainBox.hidden = false;
@@ -296,7 +331,7 @@
   $("btn-registrar").addEventListener("click", registrar);
   $("btn-pausar").addEventListener("click", pausar);
   $("btn-finalizar").addEventListener("click", finalizar);
-  $("btn-nova").addEventListener("click", novaSessao);
+  $("btn-nova").addEventListener("click", function () { novaSessao(true); });
   $("btn-mute").addEventListener("click", toggleMute);
 
   // ---------- Retomada ----------
@@ -322,6 +357,42 @@
     mainBox.hidden = true;
     resumoBox.hidden = true;
     retomarBox.hidden = false;
+  }
+
+  function restaurarResumo(d) {
+    // A sessão foi encerrada mas nunca chegou ao servidor: em vez de
+    // oferecer "retomar", devolve o RESUMO com o formulário de salvar.
+    feitas = d.feitas;
+    totalMs = d.totalMs;
+    defaultSec = d.defaultSec || defaultSec;
+    finalizado = true;
+    descartada = !!d.descartada;
+    estado = "idle";
+
+    var totalSec = Math.round(totalMs / 1000);
+    $("res-feitas").textContent = String(feitas);
+    $("res-total").textContent = fmt(totalSec);
+    $("res-media").textContent = feitas ? fmt(totalSec / feitas) : "—";
+    $("res-descartada").hidden = !descartada;
+    $("res-nao-salva").hidden = feitas === 0;
+
+    var salvarForm = $("treino-salvar-form");
+    if (salvarForm) {
+      salvarForm.hidden = feitas === 0;
+      if (feitas > 0) {
+        $("save-questoes").value = String(feitas);
+        $("save-total").value = String(totalSec);
+        $("save-padrao").value = String(defaultSec);
+      }
+    }
+
+    retomarBox.hidden = true;
+    setupBox.hidden = true;
+    mainBox.hidden = true;
+    resumoBox.hidden = false;
+    // Regrava: o arranque passa por `novaSessao()`, que limpa o localStorage.
+    // Sem isto o resumo sobreviveria a UMA morte da aba, e não à seguinte.
+    salvarSessao();
   }
 
   function retomar() {
@@ -390,12 +461,24 @@
     mostrarSetup(false); // primeira vez: pede o tempo padrão
   }
 
+  // O servidor confirmou a gravação: só AGORA o rascunho local pode sumir.
+  // Sem esta porta, ou o rascunho sumia cedo (e a aba morrendo levava o resumo)
+  // ou sobrevivia demais (e ressuscitava por cima do treino seguinte).
+  if (window.location.search.indexOf("salvo=1") !== -1) {
+    limparSessao();
+    pendente = null;
+  }
+
   // Treino interrompido tem prioridade sobre tudo: é o que a pessoa perdeu.
   if (pendente && (pendente.feitas > 0 || pendente.accumMs > 0)) {
     if (pendente.defaultSec > 0) {
       defaultSec = pendente.defaultSec;
       $("padrao-label").textContent = fmt(defaultSec);
     }
-    oferecerRetomada(pendente);
+    if (pendente.finalizado) {
+      restaurarResumo(pendente);
+    } else {
+      oferecerRetomada(pendente);
+    }
   }
 })();
