@@ -16,18 +16,12 @@
     <a href="{{ url_for('oficiais.index') }}" aria-current="page">Oficiais</a>
   </nav>
   <p class="seg-explica">Oficiais — o listão real divulgado pela banca. Aqui a posição é oficial, não estimada.</p>
-
-  {% if minhas %}
-  <div class="board-cells">
-    {% for ln in minhas[:3] %}
-    <div class="board-cell">
-      <p class="board-value">{% if ln.status == "classificado" %}{{ ln.classificacao }}{% else %}—{% endif %}</p>
-      <p class="board-label">{{ ln.resultado.concurso_nome }}<span class="board-scope">{% if ln.status == "classificado" %}classificado{% else %}{{ ln.status_label }}{% endif %}</span></p>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 </section>
+
+{# O número da colocação aparece UMA vez, no card "Sua colocação nacional"
+   abaixo. Antes ele vinha também numa board-cell aqui em cima, e os dois
+   diziam a mesma coisa — o card ficou porque tem espaço para explicar que
+   aquilo é posição entre todos os candidatos, não dentro do colégio. #}
 
 {% if not resultados %}
 <section class="card empty-state">
@@ -44,7 +38,11 @@
 
 {% if minhas %}
 <section class="card">
-  <h2 class="card-title">Seus resultados</h2>
+  <h2 class="card-title">Sua colocação nacional</h2>
+  <p class="card-sub">
+    Posição no listão divulgado pela banca, entre todos os candidatos do país —
+    não é a sua posição dentro do colégio.
+  </p>
   <ul class="meus-of-list">
     {% for ln in minhas %}
     <li class="meus-of-item">
