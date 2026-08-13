@@ -100,9 +100,32 @@ compromisso. Atualizado em 10/08/2026.
   **2.2** entregue. Regra proposta: segundo número sobe a cada lote de
   funcionalidade, terceiro a cada correção solta.
 
-- **Import da 2ª fase (discursiva) dos simulados do colégio.** O campo `fase` já
-  existe no modelo e no import; falta o prompt de extração e o tratamento das
-  notas decimais do bloco DISCURSIVO, que hoje é explicitamente ignorado.
+- **Import da 2ª fase (discursiva) dos simulados do colégio.** Decidido em
+  12/08/2026 — desenho fechado, falta implementar:
+
+  - **Reaproveitar a estrutura existente**, sem tabela nova. A linha do ranking
+    ganha um campo de notas decimais ao lado do de acertos, e o `fase` (que já
+    existe) diz qual dos dois vale.
+  - **A chave única precisa passar a incluir `fase`.** Hoje é
+    `(banca, rotulo, data)`, e as duas fases do mesmo simulado compartilham as
+    três — colidiriam. Uma migration.
+  - Reusar a validação de nota decimal que já existe em `oficiais_import.py`,
+    em vez de escrever outra.
+  - Ganho: import, ranking, merge de aluno e vínculo seguem funcionando sem
+    alteração.
+  - Falta o prompt de extração para o bloco DISCURSIVO, hoje explicitamente
+    ignorado pelo `PROMPT-EXTRACAO-SIMULADO.md`.
+
+- **Média final combinando as duas fases.** Decidido: o app calcula e mostra
+  quando as duas fases do mesmo simulado estiverem importadas.
+
+  A conta observada nos prints do S5 é `0,8 × discursivo + 0,2 × objetivo`.
+  **Mas isso foi inferido de duas linhas de uma planilha, não é regra
+  publicada.** Aplique aqui a mesma lição da média do IME: se a planilha trouxer
+  a coluna MÉDIA FINAL, **guarde e exiba o número dela**; só calcule quando a
+  coluna não existir, e deixe claro na tela quando o valor é calculado e não
+  copiado. Se o colégio mudar o peso, o número copiado continua certo e o
+  calculado não.
 
 - **Ressincronização de simulados.** Hoje o "Sincronizar" só pula o que já
   existe. Falta atualizar um simulado pessoal quando o import de origem for
