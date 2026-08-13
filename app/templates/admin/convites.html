@@ -24,12 +24,12 @@
 <section class="card">
   <h2 class="card-title">Contas sem aluno</h2>
   <p class="card-sub">
-    Contas que existem mas não estão ligadas a nenhum aluno — entre elas as que
-    já existiam antes dos convites. Gere o código do aluno certo e peça para a
-    pessoa resgatar, ou acerte o vínculo pelo nome no perfil dela.
+    Quem entrou por <strong>coringa</strong> está certo assim — não é pendência.
+    As demais são contas que ainda faltam casar com um aluno.
   </p>
   <ul class="of-simples">
-    {% for u in contas_soltas %}
+    {% for item in contas_soltas %}
+    {% set u = item.user %}
     <li>
       <span class="pessoa">
         {{ monograma(u.nome_oficial or u.username, "sm") }}
@@ -40,11 +40,61 @@
           {%- if u.nome_oficial %} <span class="badge-eu">{{ u.nome_oficial }}</span>{% endif %}
         </span>
       </span>
+      {% if item.coringa %}
+      <span class="chip chip-forte">coringa · {{ item.coringa.rotulo }}</span>
+      {% else %}
+      <span class="chip">falta vincular</span>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>
 </section>
 {% endif %}
+
+<section class="card">
+  <h2 class="card-title">Códigos coringa</h2>
+  <p class="card-sub">
+    Liberam a conta <strong>sem vincular a aluno nenhum</strong> — para
+    coordenador, professor ou conta de teste. Uso único, como os demais: para
+    convidar duas pessoas, gere dois.
+  </p>
+
+  <form method="post" action="{{ url_for('admin.convite_coringa') }}" class="coringa-form">
+    {{ coringa_form.hidden_tag() }}
+    <div class="form-group">
+      {{ coringa_form.rotulo.label(class="form-label") }}
+      {{ coringa_form.rotulo(class="input", placeholder="Ex.: coordenador da turma", maxlength="60") }}
+      <p class="card-sub">O rótulo é para você lembrar depois de quem foi cada código.</p>
+    </div>
+    <button type="submit" class="btn btn-outline btn-block">Gerar coringa</button>
+  </form>
+
+  {% if coringas %}
+  <ul class="of-simples">
+    {% for c in coringas %}
+    <li>
+      <span class="pessoa">
+        <span>
+          <strong>{{ c.rotulo }}</strong>
+          {% if c.usado %}
+          <span class="serie-chip">usado por {{ c.usuario.username if c.usuario else "?" }}</span>
+          {% else %}
+          <span class="convite-codigo">{{ c.formatado }}</span>
+          {% endif %}
+        </span>
+      </span>
+      {% if not c.usado %}
+      <form method="post" action="{{ url_for('admin.convite_revogar', convite_id=c.id) }}"
+            data-confirm="Revogar o coringa &quot;{{ c.rotulo }}&quot;?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="linklike">revogar</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
 
 <section class="card">
   <h2 class="card-title">Alunos</h2>

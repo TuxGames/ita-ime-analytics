@@ -249,10 +249,24 @@ class ConviteAluno(db.Model):
     ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
     TAMANHO = 8
 
+    # "aluno": pertence a um aluno e o resgate cria o vínculo.
+    # "coringa": libera a conta e NÃO vincula a ninguém — coordenador, professor,
+    # conta de teste. O tipo é explícito em vez de deduzido de `aluno_id IS NULL`
+    # porque a diferença é de intenção, não de preenchimento: um convite de aluno
+    # com aluno apagado também ficaria nulo, e os dois casos não são a mesma
+    # coisa. Explícito também deixa a consulta e a tela lerem direto.
+    TIPOS = ("aluno", "coringa")
+
     id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(20), nullable=False, default="aluno")
+    # NULL quando tipo == "coringa".
     aluno_id = db.Column(
-        db.Integer, db.ForeignKey("alunos.id"), nullable=False, index=True
+        db.Integer, db.ForeignKey("alunos.id"), nullable=True, index=True
     )
+    # Para que serve o coringa ("coordenador", "professor de física"). Sem isso,
+    # daqui a um mês ninguém sabe para quem foi cada um. Obrigatório no coringa,
+    # ignorado no convite de aluno, que já se identifica pelo nome do aluno.
+    rotulo = db.Column(db.String(60), nullable=True)
     codigo = db.Column(db.String(20), nullable=False, unique=True, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
@@ -268,6 +282,17 @@ class ConviteAluno(db.Model):
     @property
     def usado(self) -> bool:
         return self.usado_por_user_id is not None
+
+    @property
+    def eh_coringa(self) -> bool:
+        return self.tipo == "coringa"
+
+    @property
+    def destino(self) -> str:
+        """Para quem é este convite, em uma linha — o que a tela do admin mostra."""
+        if self.eh_coringa:
+            return self.rotulo or "sem rótulo"
+        return self.aluno.nome if self.aluno else "aluno removido"
 
     @property
     def formatado(self) -> str:

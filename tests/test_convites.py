@@ -10,6 +10,9 @@ import pytest
 
 from app.convites import (
     ErroConvite,
+    convite_coringa_do_usuario,
+    coringas,
+    emitir_coringa,
     alunos_sem_conta,
     contas_sem_aluno,
     convite_ativo,
@@ -364,7 +367,7 @@ def test_listas_de_trabalho_do_admin(app, db, admin):
     conta = _conta_nova(db)
 
     assert aluno in alunos_sem_conta()
-    assert conta in contas_sem_aluno()
+    assert conta in [i["user"] for i in contas_sem_aluno()]
 
     convite = emitir(aluno, admin.id)
     db.session.commit()
@@ -372,4 +375,152 @@ def test_listas_de_trabalho_do_admin(app, db, admin):
     db.session.commit()
 
     assert aluno not in alunos_sem_conta()
-    assert conta not in contas_sem_aluno()
+    assert conta not in [i["user"] for i in contas_sem_aluno()]
+
+
+# --------------------------------------------------------------------------
+# Código coringa: libera a conta SEM vincular a aluno
+# --------------------------------------------------------------------------
+
+
+def test_coringa_libera_sem_vincular(app, db, admin, client, logar):
+    coringa = emitir_coringa("coordenador", admin.id)
+    db.session.commit()
+    aluno = _aluno(db, "HELENA DIAS MOURA")
+    nova = _conta_nova(db)
+    logar(nova)
+
+    resposta = client.post("/convite", data={"codigo": coringa.formatado})
+
+    assert resposta.status_code == 302
+    assert db.session.get(User, nova.id).convite_ok is True, "liberou"
+    assert db.session.get(Aluno, aluno.id).user_id is None, "não vinculou ninguém"
+    assert db.session.get(User, nova.id).nome_oficial is None, "não herdou nome de aluno"
+
+
+def test_coringa_e_de_uso_unico(app, db, admin, client, logar):
+    coringa = emitir_coringa("professor de física", admin.id)
+    db.session.commit()
+
+    primeira = _conta_nova(db, "prof1")
+    logar(primeira)
+    client.post("/convite", data={"codigo": coringa.codigo})
+
+    segunda = _conta_nova(db, "prof2")
+    logar(segunda)
+    resposta = client.post("/convite", data={"codigo": coringa.codigo})
+
+    assert "já foi usado" in resposta.get_data(as_text=True)
+    assert db.session.get(User, segunda.id).convite_ok is False
+
+
+def test_coringa_exige_rotulo(app, db, admin):
+    with pytest.raises(ErroConvite, match="para que serve"):
+        emitir_coringa("   ", admin.id)
+
+
+def test_coringa_nao_reaproveita_pendente(app, db, admin):
+    """Dois convidados sem aluno = dois coringas, cada um com seu rótulo."""
+    um = emitir_coringa("coordenador", admin.id)
+    dois = emitir_coringa("professor de física", admin.id)
+    db.session.commit()
+
+    assert um.codigo != dois.codigo
+    assert len(coringas()) == 2
+
+
+def test_coringa_nao_aparece_como_convite_de_aluno(app, db, admin):
+    """`convite_ativo` é do aluno; coringa não pode vazar para lá."""
+    aluno = _aluno(db, "IGOR SANTOS PRADO")
+    emitir_coringa("coordenador", admin.id)
+    db.session.commit()
+
+    assert convite_ativo(aluno.id) is None
+
+
+def test_conta_coringa_aparece_identificada_na_lista(app, db, admin, client, logar):
+    coringa = emitir_coringa("coordenador", admin.id)
+    db.session.commit()
+    conta = _conta_nova(db, "coord")
+    resgatar(coringa.codigo, conta)
+    db.session.commit()
+
+    item = next(i for i in contas_sem_aluno() if i["user"].id == conta.id)
+    assert item["coringa"] is not None
+    assert item["coringa"].rotulo == "coordenador"
+    assert convite_coringa_do_usuario(conta.id) is not None
+
+    admin.convite_ok = True
+    db.session.commit()
+    logar(admin)
+    corpo = client.get("/admin/convites").get_data(as_text=True)
+    assert "coringa · coordenador" in corpo
+
+
+def test_conta_sem_coringa_aparece_como_pendencia(app, db, admin, client, logar):
+    """As contas que já existiam continuam sendo o que falta acertar."""
+    solta = _conta_nova(db, "antiga")
+    solta.convite_ok = True
+    db.session.commit()
+
+    item = next(i for i in contas_sem_aluno() if i["user"].id == solta.id)
+    assert item["coringa"] is None
+
+    admin.convite_ok = True
+    db.session.commit()
+    logar(admin)
+    assert "falta vincular" in client.get("/admin/convites").get_data(as_text=True)
+
+
+def test_admin_gera_coringa_pela_tela(client, db, admin, logar):
+    admin.convite_ok = True
+    db.session.commit()
+    logar(admin)
+
+    client.post("/admin/convites/coringa", data={"rotulo": "coordenador da turma"})
+
+    lista = coringas()
+    assert len(lista) == 1
+    assert lista[0].rotulo == "coordenador da turma"
+    assert lista[0].tipo == "coringa"
+    assert lista[0].aluno_id is None
+
+
+def test_coringa_sem_rotulo_nao_gera(client, db, admin, logar):
+    admin.convite_ok = True
+    db.session.commit()
+    logar(admin)
+
+    client.post("/admin/convites/coringa", data={"rotulo": ""})
+
+    assert coringas() == []
+
+
+# --------------------------------------------------------------------------
+# As telas aguentam conta sem aluno
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "rota",
+    ["/", "/simulados/", "/simulados/turma/", "/oficiais/", "/estudos/", "/perfil", "/evolucao"],
+)
+def test_telas_nao_quebram_para_conta_coringa(rota, client, db, admin, logar):
+    """Conta coringa não tem aluno, então não tem linha própria em ranking
+    nenhum. As telas têm que aguentar isso sem erro e sem estado de erro."""
+    aplicar(db, parse(json.dumps(payload_oficial("novata"))), admin.id)
+    db.session.commit()
+
+    coringa = emitir_coringa("coordenador", admin.id)
+    db.session.commit()
+    conta = _conta_nova(db, "coord")
+    resgatar(coringa.codigo, conta)
+    db.session.commit()
+    logar(conta)
+
+    resposta = client.get(rota)
+
+    assert resposta.status_code == 200, f"{rota} respondeu {resposta.status_code}"
+    corpo = resposta.get_data(as_text=True)
+    assert "Traceback" not in corpo
+    assert "Erro inesperado" not in corpo

@@ -18,6 +18,10 @@ from .extensions import db
 from .models import Aluno, ConviteAluno, User, utcnow
 
 
+class ErroConvite(Exception):
+    """Código inválido, já usado, ou conta que já resgatou outro."""
+
+
 def gerar_codigo() -> str:
     """Código novo, curto e sem caractere ambíguo, garantidamente inédito.
 
@@ -44,11 +48,53 @@ def normalizar_codigo(bruto) -> str:
     return "".join((bruto or "").upper().split()).replace("-", "")
 
 
+def emitir_coringa(rotulo: str, criado_por_id: int) -> "ConviteAluno":
+    """Convite que LIBERA a conta sem vincular a aluno nenhum.
+
+    Para quem não é aluno: coordenador, professor, conta de teste. Uso único
+    como os demais — para convidar duas pessoas, geram-se dois. Não reaproveita
+    coringa pendente (ao contrário do convite de aluno): cada coringa é para uma
+    pessoa diferente, e o rótulo é justamente o que os distingue.
+    """
+    rotulo = (rotulo or "").strip()
+    if not rotulo:
+        raise ErroConvite("Diga para que serve o coringa (ex.: coordenador).")
+
+    convite = ConviteAluno(
+        tipo="coringa",
+        aluno_id=None,
+        rotulo=rotulo[:60],
+        codigo=gerar_codigo(),
+        created_by=criado_por_id,
+    )
+    db.session.add(convite)
+    return convite
+
+
+def coringas() -> list["ConviteAluno"]:
+    """Todos os coringas, pendentes e usados, do mais novo para o mais velho."""
+    return db.session.scalars(
+        db.select(ConviteAluno)
+        .filter(ConviteAluno.tipo == "coringa")
+        .order_by(ConviteAluno.created_at.desc())
+    ).all()
+
+
+def convite_coringa_do_usuario(user_id: int) -> "ConviteAluno | None":
+    """O coringa que esta conta resgatou, se foi por aí que ela entrou."""
+    return db.session.scalar(
+        db.select(ConviteAluno).filter(
+            ConviteAluno.tipo == "coringa",
+            ConviteAluno.usado_por_user_id == user_id,
+        )
+    )
+
+
 def convite_ativo(aluno_id: int) -> "ConviteAluno | None":
     """Convite emitido e ainda não usado deste aluno, se houver."""
     return db.session.scalar(
         db.select(ConviteAluno)
-        .filter_by(aluno_id=aluno_id, usado_por_user_id=None)
+        .filter_by(aluno_id=aluno_id, usado_por_user_id=None, tipo="aluno")
         .order_by(ConviteAluno.created_at.desc())
     )
 
@@ -64,7 +110,10 @@ def emitir(aluno: "Aluno", criado_por_id: int) -> "ConviteAluno":
         return existente
 
     convite = ConviteAluno(
-        aluno_id=aluno.id, codigo=gerar_codigo(), created_by=criado_por_id
+        tipo="aluno",
+        aluno_id=aluno.id,
+        codigo=gerar_codigo(),
+        created_by=criado_por_id,
     )
     db.session.add(convite)
     return convite
@@ -81,12 +130,11 @@ def revogar(convite: "ConviteAluno") -> bool:
     return True
 
 
-class ErroConvite(Exception):
-    """Código inválido, já usado, ou conta que já resgatou outro."""
+def resgatar(codigo_bruto: str, user: "User") -> "Aluno | None":
+    """Resgata o código para `user`. Não comita.
 
-
-def resgatar(codigo_bruto: str, user: "User") -> "Aluno":
-    """Resgata o código para `user` e devolve o aluno vinculado. Não comita.
+    Devolve o aluno vinculado, ou None quando o código é coringa — coringa
+    libera a conta sem amarrá-la a aluno nenhum.
 
     Levanta `ErroConvite` com mensagem pronta para a tela. Faz tudo de uma vez
     — marca o convite, liga o aluno à conta e libera o acesso — porque um
@@ -105,14 +153,20 @@ def resgatar(codigo_bruto: str, user: "User") -> "Aluno":
     if convite.usado:
         raise ErroConvite("Esse código já foi usado. Peça um novo ao admin.")
 
+    convite.usado_por_user_id = user.id
+    convite.usado_em = utcnow()
+
+    if convite.eh_coringa:
+        # Libera e pronto: coringa é justamente para quem NÃO é aluno. Sem
+        # vínculo, sem nome_oficial herdado — a pessoa não aparece em listão.
+        user.convite_ok = True
+        return None
+
     aluno = db.session.get(Aluno, convite.aluno_id)
     if aluno is None:
         raise ErroConvite("O aluno desse convite não existe mais. Peça um novo ao admin.")
     if aluno.user_id is not None and aluno.user_id != user.id:
         raise ErroConvite("Esse aluno já está vinculado a outra conta. Fale com o admin.")
-
-    convite.usado_por_user_id = user.id
-    convite.usado_em = utcnow()
 
     aluno.user_id = user.id
     # A marca que faz o `revincular()` respeitar este vínculo.
@@ -144,12 +198,15 @@ def alunos_sem_conta() -> list["Aluno"]:
     ).all()
 
 
-def contas_sem_aluno() -> list["User"]:
-    """Contas que não estão ligadas a aluno nenhum.
+def contas_sem_aluno() -> list[dict]:
+    """Contas não ligadas a aluno nenhum, dizendo QUAIS são coringa.
 
-    Logo depois do deploy são as 7 contas que já existiam, liberadas pela
-    migration mas nunca casadas com um aluno — é o que o admin vai querer
-    acertar na mão.
+    A lista serve para o admin ver o que falta acertar — mas conta que entrou
+    por coringa não é pendência, é o estado final correto. Por isso cada item
+    vem com o convite coringa (ou None), e a tela separa as duas coisas.
+
+    Logo depois do deploy, as contas que já existiam aparecem aqui sem coringa:
+    são elas que o admin vai querer casar com um aluno.
     """
     vinculados = db.session.scalars(
         db.select(Aluno.user_id).filter(Aluno.user_id.isnot(None))
@@ -157,4 +214,8 @@ def contas_sem_aluno() -> list["User"]:
     query = db.select(User).order_by(User.username)
     if vinculados:
         query = query.filter(User.id.notin_(vinculados))
-    return db.session.scalars(query).all()
+
+    return [
+        {"user": u, "coringa": convite_coringa_do_usuario(u.id)}
+        for u in db.session.scalars(query)
+    ]

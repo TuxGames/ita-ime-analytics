@@ -82,9 +82,20 @@ def convite():
             db.session.commit()
             current_app.logger.info(
                 "Convite resgatado: usuario=%s aluno=%s ip=%s",
-                current_user.username, aluno.nome, request.remote_addr,
+                current_user.username,
+                aluno.nome if aluno else "(coringa)",
+                request.remote_addr,
             )
-            flash(f"Bem-vindo(a)! Sua conta foi vinculada a {aluno.nome}.", "success")
+            if aluno is None:
+                # Coringa: liberou sem vincular. Dizer isso evita a pessoa ficar
+                # procurando a própria linha num ranking onde ela não está.
+                flash(
+                    "Conta liberada. Ela não está ligada a nenhum aluno, então "
+                    "você acompanha a turma sem ter resultados próprios.",
+                    "success",
+                )
+            else:
+                flash(f"Bem-vindo(a)! Sua conta foi vinculada a {aluno.nome}.", "success")
             return redirect(url_for("main.dashboard"))
 
     return render_template("auth/convite.html", form=form)

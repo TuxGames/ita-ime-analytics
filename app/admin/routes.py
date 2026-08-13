@@ -29,17 +29,20 @@ from ..alunos import (
 from flask_login import current_user
 
 from ..convites import (
+    ErroConvite,
     alunos_sem_conta,
+    coringas,
     contas_sem_aluno,
     convite_ativo,
     desvincular,
     emitir,
+    emitir_coringa,
     revogar,
 )
 from ..decorators import admin_required
 from ..evolucao import evolucao_do_aluno
 from ..extensions import db
-from ..forms import AlunoForm
+from ..forms import AlunoForm, CoringaForm
 from ..models import (
     MATERIAS_SIMULADO,
     TURMA_CURTO,
@@ -365,6 +368,8 @@ def convites():
         itens=itens,
         faltam=alunos_sem_conta(),
         contas_soltas=contas_sem_aluno(),
+        coringas=coringas(),
+        coringa_form=CoringaForm(),
     )
 
 
@@ -415,4 +420,22 @@ def convite_desvincular(aluno_id):
     desvincular(aluno)
     db.session.commit()
     flash(f"{aluno.nome} não está mais vinculado a nenhuma conta.", "success")
+    return redirect(url_for("admin.convites"))
+
+
+@admin_bp.post("/convites/coringa")
+@admin_required
+def convite_coringa():
+    """Código que libera a conta sem vincular a aluno nenhum."""
+    form = CoringaForm()
+    if not form.validate_on_submit():
+        flash("Diga para que serve o coringa (ex.: coordenador).", "error")
+        return redirect(url_for("admin.convites"))
+    try:
+        convite = emitir_coringa(form.rotulo.data, current_user.id)
+    except ErroConvite as erro:
+        flash(str(erro), "error")
+        return redirect(url_for("admin.convites"))
+    db.session.commit()
+    flash(f"Coringa para {convite.rotulo}: {convite.formatado}", "success")
     return redirect(url_for("admin.convites"))

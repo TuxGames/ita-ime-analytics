@@ -117,6 +117,19 @@ class ConviteForm(FlaskForm):
     )
 
 
+class CoringaForm(FlaskForm):
+    """Geração de código coringa. O rótulo é obrigatório: sem ele, daqui a um
+    mês ninguém sabe para quem cada coringa foi emitido."""
+
+    rotulo = StringField(
+        "Para quem é",
+        validators=[
+            DataRequired("Diga para que serve (ex.: coordenador)."),
+            Length(max=60, message="Use no máximo 60 caracteres."),
+        ],
+    )
+
+
 class MateriaScoreForm(Form):
     """Par acertos/total de uma matéria. Sem CSRF próprio: é subform de SimuladoForm."""
 
