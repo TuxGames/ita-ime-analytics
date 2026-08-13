@@ -268,8 +268,18 @@
     defaultSec = total;
     try { localStorage.setItem(KEY, String(total)); } catch (e) { /* modo privado */ }
     setupBox.hidden = true;
-    novaSessao();
     $("padrao-label").textContent = fmt(defaultSec);
+
+    // Trocar uma PREFERÊNCIA não pode apagar trabalho: antes isto caía em
+    // novaSessao() e zerava a sessão em andamento sem avisar nada.
+    if (estado === "idle" && feitas === 0) {
+      novaSessao();
+    } else {
+      mainBox.hidden = false;
+      resumoBox.hidden = true;
+      render();
+      salvarSessao();
+    }
   }
 
   function toggleMute() {
@@ -341,6 +351,12 @@
   }
 
   function descartar() {
+    // confirm() vindo de arquivo externo passa na CSP; handler inline não.
+    if (pendenteSalvo && pendenteSalvo.feitas > 0) {
+      var aviso = "Descartar o treino com " + pendenteSalvo.feitas +
+        " questão(ões) registrada(s)? Isso não tem volta.";
+      if (!window.confirm(aviso)) return;
+    }
     pendenteSalvo = null;
     limparSessao();
     retomarBox.hidden = true;
