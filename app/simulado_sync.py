@@ -15,7 +15,14 @@ Nada aqui dá commit: quem comita é a rota, como no resto do projeto.
 
 from .extensions import db
 from .grouping import banca_curta, casar_concurso
-from .models import Concurso, Simulado, SimuladoMateria, SimuladoTurma, SimuladoTurmaLinha
+from .models import (
+    Concurso,
+    Simulado,
+    SimuladoMateria,
+    SimuladoTurma,
+    SimuladoTurmaLinha,
+    nota_proporcional,
+)
 
 
 def linhas_pendentes(user_id: int) -> list["SimuladoTurmaLinha"]:
@@ -90,18 +97,18 @@ def valores_do_ranking(linha: "SimuladoTurmaLinha", concurso: "Concurso"):
     turma = linha.turma_obj
     permitidas = {m.name for m in concurso.materias}
 
-    notas, percentuais = [], []
+    notas = []
     for materia in turma.materias:
         certas = linha.acertos.get(materia.name)
         total = turma.questoes.get(materia.name)
         if certas is None or not total or materia.name not in permitidas:
             continue
         notas.append((materia, certas, total))
-        percentuais.append(100.0 * certas / total)
-    if not percentuais:
+    if not notas:
         return None
 
-    nota_geral = round(sum(percentuais) / len(percentuais), 2)
+    # Escala 100: o simulado pessoal é mostrado como porcentagem.
+    nota_geral = nota_proporcional([(c, t) for _, c, t in notas], escala=100.0)
     posicao = next(
         (pos for pos, ln, _ in turma.ranking([m for m, _, _ in notas]) if ln.id == linha.id),
         None,

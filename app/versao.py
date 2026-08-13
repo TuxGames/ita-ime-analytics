@@ -18,12 +18,13 @@ banca com fase (2.1), os grupos de estudo (2.2), o lote de monograma, renomear
 grupo e placar de notas (2.3), e agora o redesign das 29 telas restantes —
 lote novo, então o segundo sobe e o terceiro volta para `00`.
 
-O `2.4.01` está reservado para a correção da escala da nota do simulado
-(0-100 com peso igual -> 0-10 proporcional), que ficou parada esperando o
-levantamento de quantas notas de produção são automáticas.
+O `2.4.01` nunca chegou a existir: ficou reservado para a correção da nota do
+simulado, que ficou parada esperando o levantamento de produção. Quando ela
+saiu, o `2.4.02` (redundância em Oficiais) já estava publicado, e versão não
+anda para trás — então a correção da nota saiu no `2.4.03`.
 
 Um único lugar: quem precisar da versão importa daqui. No Jinja ela chega como
 o global `VERSAO`, registrado em app/__init__.py.
 """
 
-VERSAO = "2.4.02"
+VERSAO = "2.4.03"

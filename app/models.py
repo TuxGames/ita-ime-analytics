@@ -24,6 +24,31 @@ def utcnow():
     return datetime.now(timezone.utc)
 
 
+def nota_proporcional(pares_acertos_total, escala: float = 100.0):
+    """Nota PROPORCIONAL às questões, na escala pedida. None se não há questão.
+
+    nota = (soma dos acertos) / (soma do total de questões) x escala
+
+    É a mesma conta de `SimuladoTurma.nota_de`, que reproduz a fórmula do
+    colégio. Antes o simulado PESSOAL usava média simples dos percentuais, e as
+    duas divergiam quando as matérias tinham pesos diferentes (IME 15/15/10):
+    a mesma prova aparecia como 48,9 numa tela e 5,00 na outra.
+
+    A escala muda por tela, a conta não: o simulado pessoal usa 100 (mostrado
+    como porcentagem) e o ranking da turma usa 10 (reproduz o mural do colégio
+    na vírgula). Uma régua só, duas apresentações.
+    """
+    soma_acertos = soma_questoes = 0
+    for acertos, total in pares_acertos_total:
+        if acertos is None or not total:
+            continue
+        soma_acertos += acertos
+        soma_questoes += total
+    if not soma_questoes:
+        return None
+    return round(escala * soma_acertos / soma_questoes, 2)
+
+
 def posicoes_por_nota(pares: list) -> list:
     """[(item, nota)] -> [(posicao, item, nota)], da maior nota para a menor.
 

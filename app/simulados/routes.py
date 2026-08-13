@@ -30,6 +30,7 @@ from ..models import (
     SimuladoTurma,
     SimuladoTurmaLinha,
     normalizar_nome,
+    nota_proporcional,
     turma_valida,
     utcnow,
 )
@@ -767,16 +768,15 @@ def turma_trazer(turma_id):
     # Calcula tudo ANTES de mexer na sessão: nota_geral é NOT NULL, então o
     # registro só pode ir ao banco já com a nota pronta.
     permitidas = {m.name for m in concurso.materias}
-    notas, percentuais = [], []
+    notas = []
     for materia in turma.materias:
         certas = linha.acertos.get(materia.name)
         total = turma.questoes.get(materia.name)
         if certas is None or not total or materia.name not in permitidas:
             continue
         notas.append((materia, certas, total))
-        percentuais.append(100.0 * certas / total)
 
-    if not percentuais:
+    if not notas:
         flash(f"Nenhuma matéria do {concurso.nome} caiu nesse simulado.", "error")
         return redirect(url_for("simulados.turma_detalhe", turma_id=turma.id))
 
@@ -797,7 +797,8 @@ def turma_trazer(turma_id):
     simulado.fase = turma.fase
     simulado.data_simulado = turma.data
     simulado.origem = "import"
-    simulado.nota_geral = round(sum(percentuais) / len(percentuais), 2)
+    # Escala 100 e proporcional — a mesma régua do ranking (nota_proporcional).
+    simulado.nota_geral = nota_proporcional([(c, t) for _, c, t in notas], escala=100.0)
     simulado.nota_automatica = True
     simulado.posicao_estimada = posicao
     if existente is None:

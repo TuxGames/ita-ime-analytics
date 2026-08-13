@@ -65,12 +65,14 @@
   if (data.notas) {
     var notas = data.notas.values;
     metricas.notas = {
-      titulo: notas[notas.length - 1].toFixed(1).replace(".", ","),
-      nota: "Nota geral do último simulado, na escala 0–10.",
+      titulo: notas[notas.length - 1].toFixed(1).replace(".", ",") + "%",
+      // Porcentagem de acertos, proporcional às questões. O ranking da turma
+      // mostra o MESMO resultado em 0–10, porque reproduz o mural do colégio.
+      nota: "Acertos no último simulado, em % do total de questões.",
       build: function () {
         var o = baseOptions();
         o.scales.y.suggestedMin = 0;
-        o.scales.y.suggestedMax = 10;
+        o.scales.y.suggestedMax = 100;
         return {
           type: "line",
           data: { labels: data.notas.labels, datasets: [linha("Nota", notas, AZUL, true)] },
@@ -107,7 +109,7 @@
       build: function () {
         var o = baseOptions();
         o.scales.y.suggestedMin = 0;
-        o.scales.y.suggestedMax = 10;
+        o.scales.y.suggestedMax = 100;
         var reta = linha("Projeção", t.trend, VERDE, false);
         reta.borderDash = [6, 5];
         reta.pointRadius = 0;

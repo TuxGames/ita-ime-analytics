@@ -15,8 +15,8 @@
 
 <section class="card detail-nota-card">
   <div class="detail-nota">
-    <p class="detail-nota-value">{{ "%.1f"|format(simulado.nota_geral) }}</p>
-    <p class="detail-nota-label">nota geral</p>
+    <p class="detail-nota-value">{{ "%.1f"|format(simulado.nota_geral) }}%</p>
+    <p class="detail-nota-label">de acertos</p>
   </div>
   {% if simulado.posicao_estimada %}
   <div class="detail-nota">

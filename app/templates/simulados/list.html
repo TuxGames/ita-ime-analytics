@@ -42,7 +42,7 @@
           </p>
         </div>
         <div class="sim-nota">
-          <p class="sim-nota-value">{{ "%.1f"|format(s.nota_geral) }}</p>
+          <p class="sim-nota-value">{{ "%.1f"|format(s.nota_geral) }}%</p>
           {% if s.posicao_estimada %}<p class="sim-pos">#{{ s.posicao_estimada }}</p>{% endif %}
         </div>
       </div>
@@ -62,7 +62,7 @@
 <div class="card table-wrap show-desktop">
   <table class="table">
     <thead>
-      <tr><th>Prova</th><th>Data</th><th>Concurso</th><th>Nota</th><th>Posição</th><th>Matérias</th><th class="th-acoes">Ações</th></tr>
+      <tr><th>Prova</th><th>Data</th><th>Concurso</th><th>Acertos</th><th>Posição</th><th>Matérias</th><th class="th-acoes">Ações</th></tr>
     </thead>
     <tbody>
       {% for s in simulados %}
@@ -70,7 +70,7 @@
         <td><span class="badge-rotulo">{{ s.titulo_curto }}</span></td>
         <td>{{ s.data_simulado.strftime("%d/%m/%Y") }}</td>
         <td>{{ s.concurso.nome }}</td>
-        <td class="td-nota">{{ "%.1f"|format(s.nota_geral) }}</td>
+        <td class="td-nota">{{ "%.1f"|format(s.nota_geral) }}%</td>
         <td>{% if s.posicao_estimada %}#{{ s.posicao_estimada }}{% else %}—{% endif %}</td>
         <td>
           <div class="chips">

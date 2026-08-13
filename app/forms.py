@@ -152,7 +152,7 @@ class SimuladoForm(FlaskForm):
     modo_nota = RadioField(
         "Nota geral",
         choices=[
-            ("auto", "Automática (média dos % das matérias)"),
+            ("auto", "Automática (acertos ÷ questões das matérias)"),
             ("manual", "Manual"),
         ],
         default="manual",
@@ -203,15 +203,22 @@ class SimuladoForm(FlaskForm):
         return [(m.name, getattr(self, m.name.lower())) for m in MATERIAS_SIMULADO]
 
     def media_automatica(self, permitidas=None):
-        """Média simples dos % de acertos das matérias preenchidas (ignora vazias).
+        """Nota das matérias preenchidas, PROPORCIONAL às questões (ignora vazias).
 
         `permitidas`: conjunto de nomes de enum que contam (as do concurso). Se
-        None, considera todas as preenchidas. Retorna None se nenhuma conta."""
-        percs = []
-        for enum_name, sub in self.materia_fields():
-            if sub.preenchido and (permitidas is None or enum_name in permitidas):
-                percs.append(100.0 * sub.acertos.data / sub.total_questoes.data)
-        return round(sum(percs) / len(percs), 2) if percs else None
+        None, considera todas as preenchidas. Retorna None se nenhuma conta.
+
+        Usa `nota_proporcional` — a mesma conta do ranking da turma. Era média
+        simples dos percentuais, o que divergia quando as matérias tinham pesos
+        diferentes (IME 15/15/10)."""
+        from .models import nota_proporcional
+
+        pares = [
+            (sub.acertos.data, sub.total_questoes.data)
+            for enum_name, sub in self.materia_fields()
+            if sub.preenchido and (permitidas is None or enum_name in permitidas)
+        ]
+        return nota_proporcional(pares, escala=100.0)
 
 
 class EstudoScoreForm(Form):
