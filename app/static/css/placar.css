@@ -498,3 +498,24 @@ select.input-board option { color: var(--text); background: #fff; }
   -webkit-overflow-scrolling: touch;
 }
 .json-cru code { white-space: pre; }
+
+/* ---------- Convites ---------- */
+
+/* O código é ditado no WhatsApp e digitado no celular: fonte monoespaçada,
+   grande e espaçada para não confundir caractere nenhum. */
+.input-codigo {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 20px;
+  letter-spacing: 3px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.convite-estado { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.convite-falta { color: var(--faint); font-style: italic; }
+.convite-codigo {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: var(--blue);
+}

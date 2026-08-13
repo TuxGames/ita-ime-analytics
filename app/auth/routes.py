@@ -16,7 +16,8 @@ from flask_wtf.csrf import CSRFError
 import re
 
 from ..extensions import bcrypt, db, limiter
-from ..forms import ChangePasswordForm, LoginForm, RegisterForm
+from ..convites import ErroConvite, resgatar
+from ..forms import ChangePasswordForm, ConviteForm, LoginForm, RegisterForm
 from ..models import User
 
 _USERNAME_RE = re.compile(r"^[a-zA-Z0-9_.-]{3,32}$")
@@ -45,6 +46,48 @@ def _safe_next_url(raw_next: str | None) -> str:
         if not parts.netloc and not parts.scheme and raw_next.startswith("/"):
             return raw_next
     return url_for("main.dashboard")
+
+
+@auth_bp.before_app_request
+def exigir_convite():
+    """Conta sem código resgatado não acessa nada além da tela do código.
+
+    Mesmo padrão do `force_password_change` logo abaixo — e registrado ANTES
+    dele de propósito: quem ainda não provou que pertence à turma não deve nem
+    chegar na troca de senha.
+
+    O dado protegido é nome completo, série, turma e nota de 73 alunos, que com
+    o cadastro aberto ficava a um registro de distância de qualquer pessoa.
+    """
+    if current_user.is_authenticated and not current_user.convite_ok:
+        liberados = {"auth.convite", "auth.logout", "static"}
+        if request.endpoint not in liberados:
+            return redirect(url_for("auth.convite"))
+
+
+@auth_bp.route("/convite", methods=["GET", "POST"])
+@login_required
+def convite():
+    """Resgate do código, uma vez por conta."""
+    if current_user.convite_ok:
+        return redirect(url_for("main.dashboard"))
+
+    form = ConviteForm()
+    if form.validate_on_submit():
+        try:
+            aluno = resgatar(form.codigo.data, current_user)
+        except ErroConvite as erro:
+            form.codigo.errors.append(str(erro))
+        else:
+            db.session.commit()
+            current_app.logger.info(
+                "Convite resgatado: usuario=%s aluno=%s ip=%s",
+                current_user.username, aluno.nome, request.remote_addr,
+            )
+            flash(f"Bem-vindo(a)! Sua conta foi vinculada a {aluno.nome}.", "success")
+            return redirect(url_for("main.dashboard"))
+
+    return render_template("auth/convite.html", form=form)
 
 
 @auth_bp.before_app_request

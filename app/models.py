@@ -143,6 +143,11 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
     must_change_password = db.Column(db.Boolean, nullable=False, default=True)
+    # Resgatou um código de convite? Enquanto False a conta não acessa nada além
+    # da tela do código e do logout. Default False: conta nova nasce trancada.
+    # As contas que já existiam quando isto entrou foram marcadas True na
+    # migration — senão o deploy trancaria todo mundo sem código para digitar.
+    convite_ok = db.Column(db.Boolean, nullable=False, default=False)
     # Nome completo como aparece nos listões dos concursos. É o que liga este
     # usuário às linhas dos resultados oficiais importados pelo admin.
     nome_oficial = db.Column(db.String(120), nullable=True)
@@ -200,6 +205,14 @@ class Aluno(db.Model):
     serie = db.Column(db.String(20), nullable=True)
     # O vínculo "sou eu" mora aqui agora; as linhas herdam daqui.
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    # True quando o vínculo veio de um código de convite resgatado. É a marca de
+    # AUTORIDADE: `vinculo.revincular()` refaz os vínculos por nome depois de
+    # cada import, e sem isto desfaria o que o código estabeleceu. Vive no Aluno
+    # (e não derivada da tabela de convites) porque descreve o vínculo ATUAL:
+    # quando o admin desvincula para corrigir um erro, volta a False e o
+    # casamento por nome pode agir de novo, sem depender de interpretar o que
+    # significa um convite usado cujo vínculo foi desfeito.
+    vinculo_por_codigo = db.Column(db.Boolean, nullable=False, default=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
 
@@ -218,6 +231,52 @@ class Aluno(db.Model):
 
     def __repr__(self):
         return f"<Aluno {self.nome}>"
+
+
+class ConviteAluno(db.Model):
+    """Código de convite de USO ÚNICO, emitido pelo admin para UM aluno.
+
+    O cadastro é aberto, mas a conta nasce trancada: sem resgatar um código não
+    se acessa nada. Como o código é específico do aluno, resgatar já cria o
+    vínculo conta ↔ aluno — o admin não precisa casar nome depois.
+
+    Não guarda hash: o código não é segredo de longo prazo, é de uso único e
+    circula por WhatsApp. O que protege é ser único, curto e descartável."""
+
+    __tablename__ = "convites_aluno"
+
+    # Sem O/0 e sem I/1/L: o código é ditado no WhatsApp e digitado no celular.
+    ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    TAMANHO = 8
+
+    id = db.Column(db.Integer, primary_key=True)
+    aluno_id = db.Column(
+        db.Integer, db.ForeignKey("alunos.id"), nullable=False, index=True
+    )
+    codigo = db.Column(db.String(20), nullable=False, unique=True, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    usado_por_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=True, index=True
+    )
+    usado_em = db.Column(db.DateTime, nullable=True)
+
+    aluno = db.relationship("Aluno", foreign_keys=[aluno_id])
+    criador = db.relationship("User", foreign_keys=[created_by])
+    usuario = db.relationship("User", foreign_keys=[usado_por_user_id])
+
+    @property
+    def usado(self) -> bool:
+        return self.usado_por_user_id is not None
+
+    @property
+    def formatado(self) -> str:
+        """"ABCD-2345" — dois blocos, mais fácil de ditar e conferir."""
+        meio = len(self.codigo) // 2
+        return f"{self.codigo[:meio]}-{self.codigo[meio:]}"
+
+    def __repr__(self):
+        return f"<ConviteAluno {self.codigo} aluno={self.aluno_id}>"
 
 
 class AlunoApelido(db.Model):

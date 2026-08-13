@@ -85,6 +85,11 @@ def _criar_usuario(nome, admin=False, nome_oficial=None):
         # Sem isso o app manda todo mundo para /trocar-senha antes de qualquer
         # rota, e os testes de rota nunca chegam no que querem checar.
         must_change_password=False,
+        # Mesma ideia para a trava de convite: estas fixtures representam conta
+        # legítima e já liberada (como as que a migration libera em produção).
+        # A trava em si é testada em tests/test_convites.py, que cria contas
+        # trancadas de propósito.
+        convite_ok=True,
     )
     usuario.set_password("senha-de-teste-123")
     _db.session.add(usuario)

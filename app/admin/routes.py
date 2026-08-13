@@ -26,6 +26,16 @@ from ..alunos import (
     linhas_do_aluno,
     mesclar,
 )
+from flask_login import current_user
+
+from ..convites import (
+    alunos_sem_conta,
+    contas_sem_aluno,
+    convite_ativo,
+    desvincular,
+    emitir,
+    revogar,
+)
 from ..decorators import admin_required
 from ..evolucao import evolucao_do_aluno
 from ..extensions import db
@@ -36,6 +46,7 @@ from ..models import (
     TURMAS,
     Aluno,
     AlunoApelido,
+    ConviteAluno,
     HistoricoImport,
     ResultadoLinha,
     SimuladoTurmaLinha,
@@ -322,3 +333,86 @@ def historico_baixar(historico_id):
         mimetype="application/json",
         headers={"Content-Disposition": f'attachment; filename="{nome}"'},
     )
+
+
+# --------------------------------------------------------------------------
+# Convites — quem entra no app e a que aluno cada conta pertence.
+# --------------------------------------------------------------------------
+
+
+@admin_bp.route("/convites")
+@admin_required
+def convites():
+    """Quem já tem conta, quem tem código pendente e quem falta convidar."""
+    alunos = db.session.scalars(db.select(Aluno).order_by(Aluno.nome)).all()
+    itens = [
+        {
+            "aluno": aluno,
+            "convite": convite_ativo(aluno.id),
+            "usado": db.session.scalar(
+                db.select(ConviteAluno)
+                .filter(
+                    ConviteAluno.aluno_id == aluno.id,
+                    ConviteAluno.usado_por_user_id.isnot(None),
+                )
+                .order_by(ConviteAluno.usado_em.desc())
+            ),
+        }
+        for aluno in alunos
+    ]
+    return render_template(
+        "admin/convites.html",
+        itens=itens,
+        faltam=alunos_sem_conta(),
+        contas_soltas=contas_sem_aluno(),
+    )
+
+
+def _get_aluno(aluno_id: int) -> "Aluno":
+    aluno = db.session.get(Aluno, aluno_id)
+    if aluno is None:
+        abort(404)
+    return aluno
+
+
+@admin_bp.post("/convites/<int:aluno_id>/gerar")
+@admin_required
+def convite_gerar(aluno_id):
+    aluno = _get_aluno(aluno_id)
+    if aluno.user_id is not None:
+        flash(f"{aluno.nome} já tem conta vinculada.", "info")
+        return redirect(url_for("admin.convites"))
+    convite = emitir(aluno, current_user.id)
+    db.session.commit()
+    flash(f"Código de {aluno.nome}: {convite.formatado}", "success")
+    return redirect(url_for("admin.convites"))
+
+
+@admin_bp.post("/convites/<int:convite_id>/revogar")
+@admin_required
+def convite_revogar(convite_id):
+    convite = db.session.get(ConviteAluno, convite_id)
+    if convite is None:
+        abort(404)
+    nome = convite.aluno.nome if convite.aluno else "aluno"
+    if revogar(convite):
+        db.session.commit()
+        flash(f"Código de {nome} revogado.", "success")
+    else:
+        flash("Esse código já foi usado — não dá para revogar.", "error")
+    return redirect(url_for("admin.convites"))
+
+
+@admin_bp.post("/convites/<int:aluno_id>/desvincular")
+@admin_required
+def convite_desvincular(aluno_id):
+    """Desfaz o vínculo conta ↔ aluno, para corrigir erro.
+
+    A conta continua liberada: ela resgatou um código de verdade, e trancá-la
+    puniria a pessoa por um engano de cadastro.
+    """
+    aluno = _get_aluno(aluno_id)
+    desvincular(aluno)
+    db.session.commit()
+    flash(f"{aluno.nome} não está mais vinculado a nenhuma conta.", "success")
+    return redirect(url_for("admin.convites"))

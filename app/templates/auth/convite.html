@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Código de convite — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-hero">
+    <p class="auth-logo">ITA·IME</p>
+    <p class="auth-sub">Quase lá</p>
+  </div>
+
+  <div class="card auth-card">
+    <h1 class="card-title">Digite seu código de convite</h1>
+    <p class="card-sub">
+      O app mostra nome, turma e nota dos alunos, então só entra quem é da turma.
+      Peça seu código ao administrador — ele é pessoal e serve uma vez só.
+    </p>
+
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="form-group">
+        {{ form.codigo.label(class="form-label") }}
+        {{ form.codigo(class="input input-codigo" + (" input-error" if form.codigo.errors else ""),
+                       placeholder="ABCD-2345",
+                       autocomplete="off", autocapitalize="characters",
+                       autocorrect="off", spellcheck="false", maxlength="20") }}
+        {% for e in form.codigo.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Liberar minha conta</button>
+    </form>
+
+    <p class="auth-note">
+      Não tem código? Fale com o admin da turma.
+    </p>
+  </div>
+
+  <div class="form-actions">
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-ghost btn-block">Sair da conta</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

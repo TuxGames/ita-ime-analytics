@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "_macros.html" import monograma %}
+{% block title %}Convites — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Convites</h1>
+    <p class="page-sub">{{ faltam|length }} aluno(s) ainda sem conta</p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.turmas') }}">Voltar</a>
+</div>
+
+<section class="card info-card">
+  <p>
+    O cadastro é aberto, mas conta nova nasce <strong>trancada</strong>: sem
+    resgatar um código não acessa nada. Como o código é de um aluno específico,
+    resgatar já liga a conta àquele aluno — e esse vínculo <strong>não é
+    desfeito</strong> pelos imports seguintes.
+  </p>
+</section>
+
+{% if contas_soltas %}
+<section class="card">
+  <h2 class="card-title">Contas sem aluno</h2>
+  <p class="card-sub">
+    Contas que existem mas não estão ligadas a nenhum aluno — entre elas as que
+    já existiam antes dos convites. Gere o código do aluno certo e peça para a
+    pessoa resgatar, ou acerte o vínculo pelo nome no perfil dela.
+  </p>
+  <ul class="of-simples">
+    {% for u in contas_soltas %}
+    <li>
+      <span class="pessoa">
+        {{ monograma(u.nome_oficial or u.username, "sm") }}
+        <span>
+          {{ u.username }}
+          {%- if u.is_admin %} <span class="serie-chip">admin</span>{% endif %}
+          {%- if not u.convite_ok %} <span class="serie-chip">trancada</span>{% endif %}
+          {%- if u.nome_oficial %} <span class="badge-eu">{{ u.nome_oficial }}</span>{% endif %}
+        </span>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2 class="card-title">Alunos</h2>
+  <p class="card-sub">Código pendente aparece em destaque — é o que você manda para a pessoa.</p>
+  <ul class="of-linhas">
+    {% for item in itens %}
+    {% set a = item.aluno %}
+    <li class="of-linha">
+      <div class="of-linha-head">
+        {{ monograma(a.nome, "sm") }}
+        <span class="of-linha-nome">{{ a.nome }}
+          {%- if a.turma %} <span class="serie-chip">{{ a.turma_curto }}</span>{% endif %}
+        </span>
+      </div>
+
+      {% if a.user_id %}
+      <p class="convite-estado">
+        Conta: <strong>{{ a.user.username }}</strong>
+        {% if a.vinculo_por_codigo %}
+        <span class="chip chip-forte">por código</span>
+        {% else %}
+        <span class="chip">por nome</span>
+        {% endif %}
+      </p>
+      <form method="post" action="{{ url_for('admin.convite_desvincular', aluno_id=a.id) }}"
+            data-confirm="Desvincular {{ a.nome }} da conta {{ a.user.username }}?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="linklike">desvincular</button>
+      </form>
+
+      {% elif item.convite %}
+      <p class="convite-estado">
+        Código: <strong class="convite-codigo">{{ item.convite.formatado }}</strong>
+        <span class="chip">não usado</span>
+      </p>
+      <form method="post" action="{{ url_for('admin.convite_revogar', convite_id=item.convite.id) }}"
+            data-confirm="Revogar o código de {{ a.nome }}?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="linklike">revogar</button>
+      </form>
+
+      {% else %}
+      <p class="convite-estado convite-falta">Sem conta e sem código.</p>
+      <form method="post" action="{{ url_for('admin.convite_gerar', aluno_id=a.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline btn-sm">Gerar código</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

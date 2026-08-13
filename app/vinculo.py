@@ -20,20 +20,38 @@ def revincular() -> int:
 
     Roda inteiro (e não só o que acabou de entrar) porque as tabelas são pequenas
     e assim import novo, troca de nome no perfil e "sou eu" convergem para o
-    mesmo estado, sem caminho especial para cada caso."""
+    mesmo estado, sem caminho especial para cada caso.
+
+    PRECEDÊNCIA: vínculo que veio de código de convite (`vinculo_por_codigo`)
+    é autoritativo e NÃO é tocado aqui. O casamento por nome vale só para aluno
+    que ainda não foi reivindicado por código — sem isso, o primeiro import
+    depois de um resgate desfaria o vínculo que o código estabeleceu, que é
+    justamente o que o código existe para garantir."""
+    alunos = db.session.scalars(db.select(Aluno)).all()
+
+    # Alunos travados por código: ficam como estão, e a conta deles sai do jogo
+    # do casamento por nome (senão ela seria atribuída a um segundo aluno).
+    travados = {a.id: a.user_id for a in alunos if a.vinculo_por_codigo and a.user_id}
+    contas_travadas = set(travados.values())
+
     usuarios = db.session.scalars(
         db.select(User).filter(User.nome_oficial.isnot(None))
     ).all()
 
     desejado = {}
     for user in usuarios:
+        if user.id in contas_travadas:
+            continue
         aluno = encontrar_aluno(user.nome_oficial)
-        if aluno is not None:
+        if aluno is not None and not aluno.vinculo_por_codigo:
             desejado[aluno.id] = user.id
 
     alterados = 0
     por_aluno = {}
-    for aluno in db.session.scalars(db.select(Aluno)):
+    for aluno in alunos:
+        if aluno.id in travados:
+            por_aluno[aluno.id] = travados[aluno.id]  # intocado
+            continue
         novo = desejado.get(aluno.id)
         if aluno.user_id != novo:
             aluno.user_id = novo

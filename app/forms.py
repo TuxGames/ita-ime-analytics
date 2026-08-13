@@ -104,6 +104,19 @@ class ChangePasswordForm(FlaskForm):
             raise ValidationError("A nova senha deve ser diferente da atual.")
 
 
+class ConviteForm(FlaskForm):
+    """Resgate do código de convite. A normalização (caixa, espaço, hífen) é
+    feita em `convites.normalizar_codigo`, não aqui — o form só recolhe."""
+
+    codigo = StringField(
+        "Código de convite",
+        validators=[
+            DataRequired("Digite o código que o admin te enviou."),
+            Length(max=20, message="Código longo demais."),
+        ],
+    )
+
+
 class MateriaScoreForm(Form):
     """Par acertos/total de uma matéria. Sem CSRF próprio: é subform de SimuladoForm."""
 
