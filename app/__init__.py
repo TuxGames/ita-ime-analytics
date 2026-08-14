@@ -69,6 +69,16 @@ def create_app(config_class=Config) -> Flask:
 
     app.jinja_env.globals["VERSAO"] = VERSAO
 
+    def timestamp_br(valor):
+        """mtime (float) -> "13/08/2026 18:42". None vira travessão."""
+        if not valor:
+            return "—"
+        from datetime import datetime
+
+        return datetime.fromtimestamp(valor).strftime("%d/%m/%Y %H:%M")
+
+    app.jinja_env.filters["timestamp_br"] = timestamp_br
+
     from .security import register_security_headers
 
     register_security_headers(app)

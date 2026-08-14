@@ -523,3 +523,20 @@ select.input-board option { color: var(--text); background: #fff; }
 /* Cronômetro pausado: o número para de correr, então precisa PARECER parado.
    Antes o único sinal era o botão virar "Retomar". */
 .treino-parado { opacity: .55; }
+
+/* ---------- Diagnóstico de deploy ---------- */
+
+.diag-lista { list-style: none; margin: 0; padding: 0; }
+.diag-lista li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #EDEFF2; font-size: 13.5px; }
+.diag-lista li:last-child { border-bottom: 0; }
+.diag-rotulo { color: var(--muted); flex-shrink: 0; }
+.diag-valor { text-align: right; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.diag-sha { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; font-weight: 500; }
+.diag-neutro { color: var(--faint); font-weight: 400; font-size: 12px; }
+.diag-falha { color: var(--red); font-weight: 600; }
+.diag-difere { color: var(--red); }
+
+/* O alerta que responde sozinho "o deploy não pegou". */
+.deploy-alerta { border-left: 4px solid var(--red); background: var(--red-soft); }
+.deploy-alerta-titulo { margin: 0 0 6px; font-size: 16px; font-weight: 800; color: var(--red-dark); }
+.deploy-alerta p { margin: 0; font-size: 13.5px; color: #7A1220; }

@@ -12,6 +12,7 @@ from flask import (
     Blueprint,
     Response,
     abort,
+    current_app,
     flash,
     redirect,
     render_template,
@@ -40,8 +41,9 @@ from ..convites import (
     revogar,
 )
 from ..decorators import admin_required
+from ..diagnostico import retrato, sha_remoto, testar_github
 from ..evolucao import evolucao_do_aluno
-from ..extensions import db
+from ..extensions import db, limiter
 from ..forms import AlunoForm, CoringaForm
 from ..models import (
     MATERIAS_SIMULADO,
@@ -439,3 +441,46 @@ def convite_coringa():
     db.session.commit()
     flash(f"Coringa para {convite.rotulo}: {convite.formatado}", "success")
     return redirect(url_for("admin.convites"))
+
+
+# --------------------------------------------------------------------------
+# Diagnóstico de deploy — SÓ LEITURA.
+# --------------------------------------------------------------------------
+#
+# Nasceu de um deploy real: o disco tinha 2.5.03, o site servia 2.5.02, e o
+# primeiro `touch` no WSGI não reiniciou o worker. A comparação
+# "memória × disco" vira mostrador aqui — é ela que responde sozinha
+# "o deploy não pegou, reinicie".
+#
+# Nenhuma rota daqui escreve, move ou executa comando de mudança. O teste de
+# rede é POST (nunca GET) porque sai da máquina, e tem timeout curto: sem
+# proxy a conexão TRAVA em vez de falhar rápido.
+
+
+@admin_bp.route("/deploy")
+@admin_required
+def deploy():
+    """Estado do worker. Nada de rede: só o que dá para ler da própria máquina."""
+    return render_template("admin/deploy.html", estado=retrato(), rede=None, remoto=None)
+
+
+@admin_bp.post("/deploy/testar-rede")
+@admin_required
+@limiter.limit("10 per hour", error_message="Muitos testes de rede. Espere um pouco.")
+def deploy_testar_rede():
+    """Pergunta ao GitHub se o WORKER alcança ele. Leitura HTTP, nada mais.
+
+    O alvo é fixo no código: nada da requisição vira argumento. O formulário
+    não manda parâmetro nenhum além do CSRF.
+    """
+    current_app.logger.info(
+        "Diagnóstico de rede: usuario=%s ip=%s",
+        current_user.username,
+        request.remote_addr,
+    )
+    return render_template(
+        "admin/deploy.html",
+        estado=retrato(),
+        rede=testar_github(),
+        remoto=sha_remoto(),
+    )

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Diagnóstico de deploy — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Diagnóstico de deploy</h1>
+    <p class="page-sub">O que este worker sabe sobre si mesmo</p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.turmas') }}">Voltar</a>
+</div>
+
+{# ---- A comparação que motivou a tela ---- #}
+{% if estado.precisa_reiniciar %}
+<section class="card deploy-alerta">
+  <p class="deploy-alerta-titulo">O deploy não pegou</p>
+  <p>
+    O disco tem <strong>{{ estado.versao_disco }}</strong> e este worker está
+    servindo <strong>{{ estado.versao_memoria }}</strong>. O código chegou, mas
+    o processo não recarregou — toque o arquivo WSGI e recarregue esta página.
+  </p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2 class="card-title">Versão</h2>
+  <p class="card-sub">
+    Memória é o que o site está servindo agora; disco é o que o código diz.
+    Diferentes significa deploy aplicado e worker não reiniciado.
+  </p>
+  <ul class="diag-lista">
+    <li>
+      <span class="diag-rotulo">Em memória</span>
+      <span class="diag-valor">{{ estado.versao_memoria }}</span>
+    </li>
+    <li>
+      <span class="diag-rotulo">No disco</span>
+      <span class="diag-valor {{ 'diag-difere' if estado.precisa_reiniciar }}">
+        {{ estado.versao_disco or "não consegui ler" }}
+      </span>
+    </li>
+    <li>
+      <span class="diag-rotulo">Commit local</span>
+      <span class="diag-valor diag-sha">
+        {% if estado.commit.sha %}{{ estado.commit.sha[:7] }}{% else %}{{ estado.commit.erro }}{% endif %}
+        {%- if estado.commit.branch %} <span class="chip">{{ estado.commit.branch }}</span>{% endif %}
+      </span>
+    </li>
+    <li>
+      <span class="diag-rotulo">Commit no origin</span>
+      <span class="diag-valor diag-sha">
+        {% if remoto and remoto.sha %}
+        {{ remoto.sha[:7] }}
+        {% if estado.commit.sha and remoto.sha == estado.commit.sha %}
+        <span class="chip chip-forte">em dia</span>
+        {% elif estado.commit.sha %}
+        <span class="chip">há código novo para puxar</span>
+        {% endif %}
+        {% elif remoto %}
+        <span class="diag-falha">{{ remoto.erro }}</span>
+        {% else %}
+        <span class="diag-neutro">só com o teste de rede</span>
+        {% endif %}
+      </span>
+    </li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2 class="card-title">Quando</h2>
+  <ul class="diag-lista">
+    <li>
+      <span class="diag-rotulo">Código mudou</span>
+      <span class="diag-valor">{{ estado.quando_codigo | timestamp_br }}</span>
+    </li>
+    <li>
+      <span class="diag-rotulo">WSGI tocado</span>
+      <span class="diag-valor">{{ estado.quando_wsgi | timestamp_br }}</span>
+    </li>
+  </ul>
+  <p class="card-sub">
+    WSGI tocado antes do código mudar é a assinatura do reinício que não pegou.
+  </p>
+</section>
+
+<section class="card">
+  <h2 class="card-title">Este processo</h2>
+  <ul class="diag-lista">
+    <li>
+      <span class="diag-rotulo">Usuário</span>
+      <span class="diag-valor">{{ estado.identidade.usuario }} (uid {{ estado.identidade.uid }})</span>
+    </li>
+    <li>
+      <span class="diag-rotulo">Escreve na raiz</span>
+      <span class="diag-valor">
+        {% if estado.identidade.escreve_na_raiz %}<span class="chip chip-forte">sim</span>
+        {% else %}<span class="chip">não</span>{% endif %}
+        <span class="diag-neutro">{{ estado.identidade.raiz }}</span>
+      </span>
+    </li>
+    <li>
+      <span class="diag-rotulo">Toca o WSGI</span>
+      <span class="diag-valor">
+        {% if not estado.identidade.wsgi_existe %}
+        <span class="chip">arquivo não existe aqui</span>
+        {% elif estado.identidade.toca_o_wsgi %}<span class="chip chip-forte">sim</span>
+        {% else %}<span class="chip">não</span>{% endif %}
+      </span>
+    </li>
+    <li>
+      <span class="diag-rotulo">git no PATH</span>
+      <span class="diag-valor">
+        {% if estado.git.disponivel %}
+        <span class="chip chip-forte">sim</span>
+        <span class="diag-neutro">{{ estado.git.caminho }}</span>
+        {% else %}<span class="chip">não</span>{% endif %}
+      </span>
+    </li>
+    <li>
+      <span class="diag-rotulo">Proxy visível</span>
+      <span class="diag-valor">
+        {% if estado.proxy.tem_proxy %}
+        <span class="chip chip-forte">sim</span>
+        {% else %}
+        <span class="chip">nenhuma variável</span>
+        {% endif %}
+      </span>
+    </li>
+  </ul>
+  {% if estado.proxy.variaveis %}
+  <ul class="diag-lista">
+    {% for nome, valor in estado.proxy.variaveis.items() %}
+    <li><span class="diag-rotulo">{{ nome }}</span><span class="diag-valor diag-sha">{{ valor }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="card-sub">
+    Sem proxy no ambiente, um <code>git pull</code> a partir daqui sairia sem
+    rota e <strong>travaria até o timeout</strong> em vez de falhar rápido. É o
+    que o teste abaixo decide.
+  </p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2 class="card-title">Alcance ao GitHub</h2>
+  <p class="card-sub">
+    Só leitura, e a partir <strong>deste</strong> worker — o console tem outro
+    ambiente e a resposta dele não vale aqui. Timeout de
+    {{ "%g"|format(6.0) }}s por tentativa.
+  </p>
+
+  {% if rede %}
+  <ul class="diag-lista">
+    {% for r in rede %}
+    <li>
+      <span class="diag-rotulo">{{ r.tentativa }}</span>
+      <span class="diag-valor">
+        {% if r.ok %}<span class="chip chip-forte">alcançou</span>
+        {% else %}<span class="chip">falhou</span>{% endif %}
+        <span class="diag-neutro">{{ r.detalhe }}</span>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('admin.deploy_testar_rede') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-outline btn-block">
+      {% if rede %}Testar de novo{% else %}Testar alcance ao GitHub{% endif %}
+    </button>
+  </form>
+</section>
+
+<section class="card info-card">
+  <p>
+    Esta tela <strong>não muda nada</strong>: não puxa código, não roda
+    migration e não reinicia. Ela só mede. Os botões que agem dependem do
+    resultado do teste acima — se o worker não alcançar o GitHub, o caminho é
+    uma tarefa agendada em vez de um botão.
+  </p>
+</section>
+{% endblock %}
