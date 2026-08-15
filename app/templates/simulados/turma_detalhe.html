@@ -163,13 +163,6 @@
         {% endif %}
         {% endfor %}
       </div>
-      {% if ln.user_id is none %}
-      <form method="post" action="{{ url_for('simulados.turma_reivindicar', linha_id=ln.id) }}"
-            data-confirm="Vincular “{{ ln.nome }}” à sua conta?">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="linklike">sou eu</button>
-      </form>
-      {% endif %}
       {{ editar_linha(ln) }}
     </li>
     {% endfor %}

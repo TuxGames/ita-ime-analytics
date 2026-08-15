@@ -371,17 +371,15 @@ def editar_cabecalho(resultado_id):
 @oficiais_bp.post("/linha/<int:linha_id>/reivindicar")
 @login_required
 def reivindicar(linha_id):
-    """'Sou eu': adota o nome da linha como nome_oficial e revincula tudo."""
-    linha = db.session.get(ResultadoLinha, linha_id)
-    if linha is None:
-        abort(404)
+    """FECHADA: o vinculo conta-aluno passa a sair so do codigo de convite.
 
-    if nome_ja_usado(linha.nome_norm, current_user.id):
-        flash("Esse nome já está vinculado a outra conta.", "error")
-        return redirect(url_for("oficiais.detalhe", resultado_id=linha.resultado_id))
+    O "Sou eu" deixava qualquer conta se declarar dona de qualquer linha, sem
+    ninguem conferir -- a mesma porta que o convite existe para fechar. A rota
+    continua existindo, e nao some, para responder 403 a quem tentar por POST
+    direto depois que o botao sumiu da tela.
 
-    current_user.nome_oficial = linha.nome
-    revincular()
-    db.session.commit()
-    flash(f"Pronto — seus resultados oficiais estão ligados a {linha.nome}.", "success")
-    return redirect(url_for("oficiais.detalhe", resultado_id=linha.resultado_id))
+    Quem precisa vincular fala com o admin: /admin/convites liga a conta ao
+    aluno a mao. As contas anteriores aos convites nem conseguem resgatar
+    codigo, porque `resgatar()` recusa quem ja esta liberado.
+    """
+    abort(403)

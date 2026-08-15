@@ -205,8 +205,12 @@ class Aluno(db.Model):
     serie = db.Column(db.String(20), nullable=True)
     # O vínculo "sou eu" mora aqui agora; as linhas herdam daqui.
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
-    # True quando o vínculo veio de um código de convite resgatado. É a marca de
-    # AUTORIDADE: `vinculo.revincular()` refaz os vínculos por nome depois de
+    # True = vínculo AUTORITATIVO, decidido por gente, e não deduzido do nome.
+    # Hoje vem de duas origens: resgate de código e vínculo feito à mão pelo
+    # admin. O nome do campo ficou estreito (nem todo caso "veio de código"),
+    # mas o significado é esse — se um dia aparecer um terceiro caso que precise
+    # ser distinguido, aí vale trocar por um campo de ORIGEM.
+    # `vinculo.revincular()` refaz os vínculos por nome depois de
     # cada import, e sem isto desfaria o que o código estabeleceu. Vive no Aluno
     # (e não derivada da tabela de convites) porque descreve o vínculo ATUAL:
     # quando o admin desvincula para corrigir um erro, volta a False e o

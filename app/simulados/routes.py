@@ -724,19 +724,18 @@ def turma_editar_cabecalho(turma_id):
 @simulados_bp.post("/turma/linha/<int:linha_id>/reivindicar")
 @login_required
 def turma_reivindicar(linha_id):
-    linha = db.session.get(SimuladoTurmaLinha, linha_id)
-    if linha is None:
-        abort(404)
-    if nome_ja_usado(linha.nome_norm, current_user.id):
-        flash("Esse nome já está vinculado a outra conta.", "error")
-    else:
-        current_user.nome_oficial = linha.nome
-        revincular()
-        db.session.commit()
-        flash(f"Pronto — seus resultados estão ligados a {linha.nome}.", "success")
-    return redirect(url_for("simulados.turma_detalhe", turma_id=linha.turma_id))
+    """FECHADA: o vinculo conta-aluno passa a sair so do codigo de convite.
 
+    O "Sou eu" deixava qualquer conta se declarar dona de qualquer linha, sem
+    ninguem conferir -- a mesma porta que o convite existe para fechar. A rota
+    continua existindo, e nao some, para responder 403 a quem tentar por POST
+    direto depois que o botao sumiu da tela.
 
+    Quem precisa vincular fala com o admin: /admin/convites liga a conta ao
+    aluno a mao. As contas anteriores aos convites nem conseguem resgatar
+    codigo, porque `resgatar()` recusa quem ja esta liberado.
+    """
+    abort(403)
 @simulados_bp.post("/turma/<int:turma_id>/trazer")
 @login_required
 def turma_trazer(turma_id):

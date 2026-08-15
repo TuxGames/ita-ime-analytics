@@ -8,7 +8,7 @@ from flask_login import current_user, login_required
 from ..evolucao import evolucao_do_aluno
 from ..exportacao import exportar_dados_usuario
 from ..extensions import db
-from ..forms import MateriasPerfilForm, NomeOficialForm
+from ..forms import MateriasPerfilForm
 from ..models import (
     Aluno,
     Concurso,
@@ -217,7 +217,6 @@ def perfil():
     total_simulados = db.session.scalar(
         db.select(db.func.count(Simulado.id)).filter_by(user_id=current_user.id)
     )
-    form = NomeOficialForm()
     materias_form = MateriasPerfilForm()
 
     if request.form.get("acao") == "materias" and materias_form.validate_on_submit():
@@ -226,26 +225,17 @@ def perfil():
         flash("Matérias do perfil atualizadas.", "success")
         return redirect(url_for("main.perfil"))
 
-    if request.form.get("acao") != "materias" and form.validate_on_submit():
-        nome = (form.nome_oficial.data or "").strip()
-        chave = normalizar_nome(nome)
-        if chave and nome_ja_usado(chave, current_user.id):
-            form.nome_oficial.errors.append("Esse nome já está vinculado a outra conta.")
-        else:
-            current_user.nome_oficial = nome or None
-            revincular()
-            db.session.commit()
-            flash(
-                "Nome atualizado — seus resultados oficiais foram revinculados."
-                if nome
-                else "Nome removido: seus resultados oficiais foram desvinculados.",
-                "success",
-            )
-            return redirect(url_for("main.perfil"))
-
+    # O campo "meu nome nas listas" saiu: o vínculo conta ↔ aluno passa a sair só
+    # do código de convite ou da mão do admin. Sem entrada nova de
+    # `nome_oficial`, nenhum vínculo por nome pode nascer — o casamento
+    # automático morre por falta de entrada, e `revincular()` fica intocado
+    # para não desligar quem já está ligado.
     if request.method == "GET":
-        form.nome_oficial.data = current_user.nome_oficial
         materias_form.materias.data = [m.name for m in current_user.materias]
+
+    aluno_vinculado = db.session.scalar(
+        db.select(Aluno).filter(Aluno.user_id == current_user.id)
+    )
 
     total_oficiais = db.session.scalar(
         db.select(db.func.count(ResultadoLinha.id)).filter_by(user_id=current_user.id)
@@ -256,7 +246,7 @@ def perfil():
     return render_template(
         "perfil.html",
         total_simulados=total_simulados,
-        form=form,
+        aluno_vinculado=aluno_vinculado,
         materias_form=materias_form,
         total_oficiais=total_oficiais,
         total_rankings=total_rankings,

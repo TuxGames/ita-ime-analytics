@@ -22,16 +22,6 @@
 {% if not turma %} <span class="serie-chip">{{ ln.turma_curto }}</span>{% endif %}
 {% endmacro %}
 
-{% macro sou_eu(ln) %}
-{% if ln.user_id is none %}
-<form method="post" action="{{ url_for('oficiais.reivindicar', linha_id=ln.id) }}"
-      data-confirm="Vincular “{{ ln.nome }}” à sua conta?">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <button type="submit" class="linklike">sou eu</button>
-</form>
-{% endif %}
-{% endmacro %}
-
 {% macro editar_linha(ln) %}
 {% if current_user.is_admin %}
 <details class="extras">
@@ -154,7 +144,6 @@
         {% if ln.metrica_valor is not none %}<span class="of-linha-mp">{{ "%.4f"|format(ln.metrica_valor) }}</span>{% endif %}
       </div>
       {{ nota_chips(ln) }}
-      {{ sou_eu(ln) }}
       {{ editar_linha(ln) }}
     </li>
     {% endfor %}
@@ -185,7 +174,7 @@
           {% set nota = ln.nota_de(m) %}
           <td>{% if nota is not none %}{{ "%.2f"|format(nota) }}{% else %}—{% endif %}</td>
           {% endfor %}
-          <td class="td-acoes">{{ sou_eu(ln) }}{{ editar_linha(ln) }}</td>
+          <td class="td-acoes">{{ editar_linha(ln) }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -206,7 +195,6 @@
         {% if ln.metrica_valor is not none %}<span class="of-linha-mp">{{ "%.4f"|format(ln.metrica_valor) }}</span>{% endif %}
       </div>
       {{ nota_chips(ln) }}
-      {{ sou_eu(ln) }}
       {{ editar_linha(ln) }}
     </li>
     {% endfor %}
@@ -222,7 +210,6 @@
     {% for ln in nao_encontrados %}
     <li>
       <span class="pessoa">{{ monograma(ln.nome, "sm") }}<span>{{ ln.nome }}{{ marca_turma(ln) }}{% if ln.user_id == current_user.id %} <span class="badge-eu">você</span>{% endif %}</span></span>
-      {{ sou_eu(ln) }}
       {{ editar_linha(ln) }}
     </li>
     {% endfor %}

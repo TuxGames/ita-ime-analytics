@@ -540,3 +540,10 @@ select.input-board option { color: var(--text); background: #fff; }
 .deploy-alerta { border-left: 4px solid var(--red); background: var(--red-soft); }
 .deploy-alerta-titulo { margin: 0 0 6px; font-size: 16px; font-weight: 800; color: var(--red-dark); }
 .deploy-alerta p { margin: 0; font-size: 13.5px; color: #7A1220; }
+
+/* Vincular conta a aluno: seletor e botão na mesma linha. */
+.vincular-form { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+.vincular-form select { flex: 1; min-width: 0; }
+
+/* Porta de entrada da evolução completa, no fim do card do início. */
+.evolucao-link { margin-top: 14px; }

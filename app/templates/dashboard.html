@@ -99,6 +99,14 @@
   <p class="metric-value" id="metric-value">—</p>
   <p class="metric-nota" id="metric-nota"></p>
   <div class="metric-box"><canvas id="chart-metric" role="img" aria-label="Gráfico da métrica selecionada"></canvas></div>
+
+  {# Porta de entrada da evolução completa. É um LINK, não a página embutida:
+     /evolucao carrega Chart.js e três gráficos, e trazer isso para o início
+     deixaria a primeira tela do app mais pesada — que é justamente o que não
+     se quer. Nenhum cálculo novo acontece aqui. #}
+  <a class="btn btn-outline btn-block evolucao-link" href="{{ url_for('main.evolucao') }}">
+    Ver evolução completa
+  </a>
 </section>
 
 {% if ultimo.materias %}

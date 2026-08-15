@@ -25,22 +25,19 @@
 
 <section class="card">
   <h2 class="card-title">Seu nome nas listas</h2>
+  {% if aluno_vinculado %}
   <p class="card-sub">
-    Os rankings de simulado e os listões de concurso são importados com o nome completo
-    que aparece na lista. Diga aqui como o seu nome vem escrito e o app liga esses
-    resultados ao seu perfil automaticamente. Deixe vazio para não vincular nada.
+    Sua conta está ligada a <strong>{{ aluno_vinculado.nome }}</strong>. É por esse
+    nome que seus resultados aparecem nos rankings e listões.
   </p>
-  <form method="post" novalidate>
-    {{ form.hidden_tag() }}
-    <input type="hidden" name="acao" value="nome">
-    <div class="form-group">
-      {{ form.nome_oficial(class="input" + (" input-error" if form.nome_oficial.errors else ""),
-                           placeholder="Ex.: ARTHUR TELES VILA NOVA",
-                           autocomplete="name") }}
-      {% for e in form.nome_oficial.errors %}<p class="field-error">{{ e }}</p>{% endfor %}
-    </div>
-    <button type="submit" class="btn btn-primary btn-block">Salvar nome</button>
-  </form>
+  {% else %}
+  <p class="card-sub">
+    Sua conta <strong>ainda não está ligada a um aluno</strong>, então os rankings
+    e listões aparecem sem os seus resultados. Quem faz essa ligação é o admin da
+    turma — fale com ele. Antes dava para se declarar dono de uma linha, mas isso
+    saiu: sem conferência, qualquer conta podia reivindicar qualquer resultado.
+  </p>
+  {% endif %}
 </section>
 
 <section class="card">

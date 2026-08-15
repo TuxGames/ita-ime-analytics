@@ -179,6 +179,31 @@ def resgatar(codigo_bruto: str, user: "User") -> "Aluno | None":
     return aluno
 
 
+def vincular_a_mao(aluno: "Aluno", user: "User") -> None:
+    """Liga conta e aluno por decisão do ADMIN, sem passar por resgate.
+
+    Existe porque as contas anteriores aos convites (`convite_ok` já True) não
+    conseguem resgatar código nenhum — `resgatar()` recusa quem já está
+    liberado. Sem esta porta, elas ficariam para sempre sem aluno assim que o
+    vínculo por nome saiu do alcance do usuário.
+
+    Levanta `ErroConvite` nos dois casos que quebrariam o ranking: aluno que já
+    tem conta, e conta que já tem aluno. Duas pessoas no mesmo aluno faz a
+    mesma linha aparecer como de dois donos.
+    """
+    if aluno.user_id is not None:
+        raise ErroConvite(f"{aluno.nome} já está vinculado a uma conta.")
+
+    ja_tem = db.session.scalar(
+        db.select(Aluno).filter(Aluno.user_id == user.id)
+    )
+    if ja_tem is not None:
+        raise ErroConvite(f"{user.username} já está vinculado a {ja_tem.nome}.")
+
+    aluno.user_id = user.id
+    aluno.vinculo_por_codigo = True
+
+
 def desvincular(aluno: "Aluno") -> None:
     """Desfaz o vínculo conta ↔ aluno (correção de erro do admin). Não comita.
 

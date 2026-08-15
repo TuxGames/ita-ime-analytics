@@ -38,6 +38,7 @@ from ..convites import (
     desvincular,
     emitir,
     emitir_coringa,
+    vincular_a_mao,
     revogar,
 )
 from ..decorators import admin_required
@@ -52,6 +53,7 @@ from ..models import (
     Aluno,
     AlunoApelido,
     ConviteAluno,
+    User,
     HistoricoImport,
     ResultadoLinha,
     SimuladoTurmaLinha,
@@ -372,6 +374,9 @@ def convites():
         contas_soltas=contas_sem_aluno(),
         coringas=coringas(),
         coringa_form=CoringaForm(),
+        # Só contas SEM aluno entram no seletor: conta que já tem aluno não
+        # pode receber outro, e o seletor é a primeira barreira contra isso.
+        contas_livres=[i["user"] for i in contas_sem_aluno()],
     )
 
 
@@ -407,6 +412,40 @@ def convite_revogar(convite_id):
         flash(f"Código de {nome} revogado.", "success")
     else:
         flash("Esse código já foi usado — não dá para revogar.", "error")
+    return redirect(url_for("admin.convites"))
+
+
+@admin_bp.post("/convites/<int:aluno_id>/vincular")
+@admin_required
+def convite_vincular(aluno_id):
+    """Liga uma conta existente a um aluno, sem passar por resgate de código.
+
+    É o caminho das contas anteriores aos convites: elas já estão liberadas, e
+    `resgatar()` recusa quem já está liberado — sem isto, ficariam sem aluno
+    para sempre depois que o vínculo por nome saiu do alcance do usuário.
+
+    O id da conta vem do formulário, mas é VALIDADO contra o banco antes de
+    qualquer escrita; o resto (as duas guardas) vive em `vincular_a_mao`.
+    """
+    aluno = _get_aluno(aluno_id)
+    user_id = request.form.get("user_id", type=int)
+    user = db.session.get(User, user_id) if user_id else None
+    if user is None:
+        flash("Escolha uma conta.", "error")
+        return redirect(url_for("admin.convites"))
+
+    try:
+        vincular_a_mao(aluno, user)
+    except ErroConvite as erro:
+        flash(str(erro), "error")
+        return redirect(url_for("admin.convites"))
+
+    db.session.commit()
+    current_app.logger.info(
+        "Vinculo manual: admin=%s conta=%s aluno=%s",
+        current_user.username, user.username, aluno.nome,
+    )
+    flash(f"{user.username} agora é {aluno.nome}.", "success")
     return redirect(url_for("admin.convites"))
 
 

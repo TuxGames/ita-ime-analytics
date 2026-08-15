@@ -142,6 +142,23 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-outline btn-sm">Gerar código</button>
       </form>
+      {% if contas_livres %}
+      {# Para quem já tem conta e não consegue resgatar código (as contas
+         anteriores aos convites já estão liberadas, e `resgatar()` recusa
+         quem está liberado). Só contas SEM aluno aparecem aqui. #}
+      <form method="post" action="{{ url_for('admin.convite_vincular', aluno_id=a.id) }}"
+            class="vincular-form"
+            data-confirm="Vincular esta conta a {{ a.nome }}?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <select class="input input-sm" name="user_id" aria-label="Conta para vincular a {{ a.nome }}">
+          <option value="">— vincular conta existente —</option>
+          {% for u in contas_livres %}
+          <option value="{{ u.id }}">{{ u.username }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-outline btn-sm">Vincular</button>
+      </form>
+      {% endif %}
       {% endif %}
     </li>
     {% endfor %}
