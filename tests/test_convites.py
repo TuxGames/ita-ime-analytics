@@ -93,17 +93,46 @@ def test_emitir_reaproveita_codigo_nao_usado(app, db, admin):
 # --------------------------------------------------------------------------
 
 
+# O código deixou de ser CATRACA e virou credencial de VISIBILIDADE: quem não
+# tem usa o app inteiro, mas não vê nome nem nota de outra pessoa. A
+# preocupação que originou tudo era "estranho vendo os alunos", não "estranho
+# usando o cronômetro".
+
+
 @pytest.mark.parametrize(
-    "rota", ["/", "/simulados/", "/estudos/", "/perfil", "/oficiais/", "/grupos/"]
+    "rota", ["/", "/simulados/", "/estudos/", "/estudos/treino", "/perfil", "/grupos/", "/evolucao"]
 )
-def test_conta_sem_codigo_nao_acessa_rota_nenhuma(rota, client, db, logar):
+def test_conta_sem_codigo_usa_o_app_normalmente(rota, client, db, logar):
     nova = _conta_nova(db)
     logar(nova)
 
     resposta = client.get(rota)
 
-    assert resposta.status_code == 302
-    assert "/convite" in resposta.headers["Location"]
+    assert resposta.status_code == 200, f"{rota} -> {resposta.status_code}"
+
+
+@pytest.mark.parametrize("rota", ["/simulados/turma/", "/oficiais/"])
+def test_conta_sem_codigo_nao_ve_lista_de_gente(rota, client, db, logar):
+    nova = _conta_nova(db)
+    logar(nova)
+
+    resposta = client.get(rota)
+
+    assert resposta.status_code == 403
+    corpo = resposta.get_data(as_text=True)
+    # Bloqueio explicado, não 403 seco: a pessoa precisa saber que existe código.
+    assert "pede um código" in corpo or "pede código" in corpo
+    assert "/convite" in corpo, "tem que oferecer onde digitar"
+    assert "administrador" in corpo, "tem que dizer de onde vem o código"
+
+
+def test_conta_sem_codigo_nao_ve_ranking_de_uma_prova(client, db, admin, logar):
+    aplicar(db, parse(json.dumps(payload_oficial("novata"))), admin.id)
+    db.session.commit()
+    nova = _conta_nova(db)
+    logar(nova)
+
+    assert client.get("/oficiais/1").status_code == 403
 
 
 def test_conta_sem_codigo_alcanca_a_tela_do_codigo_e_o_logout(client, db, logar):
@@ -114,16 +143,29 @@ def test_conta_sem_codigo_alcanca_a_tela_do_codigo_e_o_logout(client, db, logar)
     assert client.post("/logout").status_code == 302
 
 
-def test_conta_sem_codigo_nem_troca_senha(client, db, logar):
-    """A trava do convite vem antes da de senha."""
+def test_o_que_libera_e_o_codigo_e_nao_ter_aluno(client, db, admin, logar):
+    """A conta coringa (o coordenador) não tem aluno e PRECISA ver tudo — é
+    para isso que ela existe. Quem libera é `convite_ok`."""
+    coringa = emitir_coringa("coordenador", admin.id)
+    db.session.commit()
+    conta = _conta_nova(db, "coord")
+    resgatar(coringa.codigo, conta)
+    db.session.commit()
+    logar(conta)
+
+    assert db.session.scalar(db.select(Aluno).filter_by(user_id=conta.id)) is None
+    assert client.get("/simulados/turma/").status_code == 200
+    assert client.get("/oficiais/").status_code == 200
+
+
+def test_conta_liberada_com_senha_temporaria_ainda_troca_a_senha(client, db, logar):
+    """A trava de senha continua; a de convite saiu de cima dela."""
     nova = _conta_nova(db)
     nova.must_change_password = True
     db.session.commit()
     logar(nova)
 
-    resposta = client.get("/trocar-senha")
-
-    assert "/convite" in resposta.headers["Location"]
+    assert client.get("/trocar-senha").status_code == 200
 
 
 # --------------------------------------------------------------------------

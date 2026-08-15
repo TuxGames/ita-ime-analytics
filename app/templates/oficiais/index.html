@@ -12,8 +12,8 @@
   </div>
   <nav class="seg" aria-label="Recorte dos resultados">
     <a href="{{ url_for('simulados.listar') }}">Meus</a>
-    <a href="{{ url_for('simulados.turma_listar') }}">Turma</a>
-    <a href="{{ url_for('oficiais.index') }}" aria-current="page">Oficiais</a>
+    {% if current_user.convite_ok %}<a href="{{ url_for('simulados.turma_listar') }}">Turma</a>
+    <a href="{{ url_for('oficiais.index') }}" aria-current="page">Oficiais</a>{% endif %}
   </nav>
   <p class="seg-explica">Oficiais — o listão real divulgado pela banca. Aqui a posição é oficial, não estimada.</p>
 </section>

@@ -12,8 +12,8 @@
   </div>
   <nav class="seg" aria-label="Recorte dos resultados">
     <a href="{{ url_for('simulados.listar') }}" aria-current="page">Meus</a>
-    <a href="{{ url_for('simulados.turma_listar') }}">Turma</a>
-    <a href="{{ url_for('oficiais.index') }}">Oficiais</a>
+    {% if current_user.convite_ok %}<a href="{{ url_for('simulados.turma_listar') }}">Turma</a>
+    <a href="{{ url_for('oficiais.index') }}">Oficiais</a>{% endif %}
   </nav>
   <p class="seg-explica">Meus — o que você digitou ou importou. Ninguém mais vê.</p>
 </section>

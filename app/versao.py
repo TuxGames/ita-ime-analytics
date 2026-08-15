@@ -29,4 +29,4 @@ Um único lugar: quem precisar da versão importa daqui. No Jinja ela chega como
 o global `VERSAO`, registrado em app/__init__.py.
 """
 
-VERSAO = "2.6.00"
+VERSAO = "2.7.00"

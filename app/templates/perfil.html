@@ -30,6 +30,13 @@
     Sua conta está ligada a <strong>{{ aluno_vinculado.nome }}</strong>. É por esse
     nome que seus resultados aparecem nos rankings e listões.
   </p>
+  {% elif not current_user.convite_ok %}
+  <p class="card-sub">
+    Você ainda <strong>não resgatou um código</strong>, então o ranking da turma
+    e os listões ficam fechados — eles mostram nome e nota dos alunos. O resto do
+    app é seu normalmente.
+  </p>
+  <a class="btn btn-outline btn-block" href="{{ url_for('auth.convite') }}">Tenho um código</a>
   {% else %}
   <p class="card-sub">
     Sua conta <strong>ainda não está ligada a um aluno</strong>, então os rankings

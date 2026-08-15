@@ -48,27 +48,15 @@ def _safe_next_url(raw_next: str | None) -> str:
     return url_for("main.dashboard")
 
 
-@auth_bp.before_app_request
-def exigir_convite():
-    """Conta sem código resgatado não acessa nada além da tela do código.
-
-    Mesmo padrão do `force_password_change` logo abaixo — e registrado ANTES
-    dele de propósito: quem ainda não provou que pertence à turma não deve nem
-    chegar na troca de senha.
-
-    O dado protegido é nome completo, série, turma e nota de 73 alunos, que com
-    o cadastro aberto ficava a um registro de distância de qualquer pessoa.
-    """
-    if current_user.is_authenticated and not current_user.convite_ok:
-        liberados = {"auth.convite", "auth.logout", "static"}
-        if request.endpoint not in liberados:
-            return redirect(url_for("auth.convite"))
-
-
 @auth_bp.route("/convite", methods=["GET", "POST"])
 @login_required
 def convite():
-    """Resgate do código, uma vez por conta."""
+    """Resgate do código, uma vez por conta.
+
+    Alcançável de propósito por link no perfil: o código deixou de trancar o
+    app, então quem recebe um precisa achar onde digitar sem ninguém mandar a
+    URL. Antes o app empurrava todo mundo para cá; agora é a pessoa que vem.
+    """
     if current_user.convite_ok:
         return redirect(url_for("main.dashboard"))
 

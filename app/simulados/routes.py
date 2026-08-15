@@ -15,7 +15,7 @@ from flask import (
 from flask_login import current_user, login_required
 
 from ..conferencia import relatorio, tem_alerta
-from ..decorators import admin_required
+from ..decorators import admin_required, exige_convite
 from ..exportacao import exportar_simulado_turma
 from ..extensions import db
 from ..forms import ImportSimuladoTurmaForm, SimuladoForm
@@ -385,7 +385,7 @@ def _get_turma(turma_id: int) -> SimuladoTurma:
 
 
 @simulados_bp.route("/turma/")
-@login_required
+@exige_convite
 def turma_listar():
     turmas = db.session.scalars(
         db.select(SimuladoTurma).order_by(
@@ -483,7 +483,7 @@ def turma_importar():
 
 
 @simulados_bp.route("/turma/<int:turma_id>")
-@login_required
+@exige_convite
 def turma_detalhe(turma_id):
     turma = _get_turma(turma_id)
     materias = turma.materias

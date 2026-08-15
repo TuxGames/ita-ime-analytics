@@ -15,7 +15,7 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
-from ..decorators import admin_required
+from ..decorators import admin_required, exige_convite
 from ..extensions import db
 from ..forms import ImportOficialForm
 from ..models import (
@@ -67,7 +67,7 @@ def _resultados():
 
 
 @oficiais_bp.route("/")
-@login_required
+@exige_convite
 def index():
     resultados = _resultados()
     # As linhas do próprio usuário, para o destaque no topo.
@@ -85,7 +85,7 @@ def index():
 
 
 @oficiais_bp.route("/<int:resultado_id>")
-@login_required
+@exige_convite
 def detalhe(resultado_id):
     resultado = db.session.get(ResultadoOficial, resultado_id)
     if resultado is None:

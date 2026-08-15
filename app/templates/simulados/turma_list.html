@@ -12,8 +12,8 @@
   </div>
   <nav class="seg" aria-label="Recorte dos resultados">
     <a href="{{ url_for('simulados.listar') }}">Meus</a>
-    <a href="{{ url_for('simulados.turma_listar') }}" aria-current="page">Turma</a>
-    <a href="{{ url_for('oficiais.index') }}">Oficiais</a>
+    {% if current_user.convite_ok %}<a href="{{ url_for('simulados.turma_listar') }}" aria-current="page">Turma</a>
+    <a href="{{ url_for('oficiais.index') }}">Oficiais</a>{% endif %}
   </nav>
   <p class="seg-explica">Turma — o ranking que o colégio divulga do mesmo simulado, com todo mundo que fez.</p>
 </section>

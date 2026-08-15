@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Precisa de código — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Esta parte pede código</h1>
+</div>
+
+<section class="card empty-state">
+  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+  <h2>O ranking da turma e os listões pedem um código</h2>
+  <p>
+    Eles mostram <strong>nome e nota dos alunos</strong>, então só quem é da turma
+    entra aqui. O resto do app continua seu: treino de questões, registro de
+    estudo, plano da semana, seus simulados e sua evolução.
+  </p>
+  <a class="btn btn-primary" href="{{ url_for('auth.convite') }}">Tenho um código</a>
+  <p class="card-sub">
+    Não tem? Peça ao administrador da turma — é ele que emite.
+  </p>
+</section>
+
+<div class="form-actions">
+  <a class="btn btn-ghost btn-block" href="{{ url_for('main.dashboard') }}">Voltar ao início</a>
+</div>
+{% endblock %}
