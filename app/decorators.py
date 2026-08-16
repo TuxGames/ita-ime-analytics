@@ -35,8 +35,44 @@ def exige_convite(f):
     @wraps(f)
     @login_required
     def wrapper(*args, **kwargs):
-        if not current_user.convite_ok:
+        # Professor enxerga lista de gente por definição do papel: é o mesmo
+        # tipo de dado da ficha que ele existe para consultar.
+        if not (current_user.convite_ok or current_user.is_professor):
             return render_template("precisa_de_codigo.html"), 403
+        return f(*args, **kwargs)
+
+    return wrapper
+
+
+def professor_required(f):
+    """Professor ou admin. Papel de LEITURA — quem escreve é o admin."""
+
+    @wraps(f)
+    @login_required
+    def wrapper(*args, **kwargs):
+        if not (current_user.is_professor or current_user.is_admin):
+            abort(403)
+        return f(*args, **kwargs)
+
+    return wrapper
+
+
+def bloqueado_para_professor(f):
+    """Fecha o que é privado do aluno para quem tem papel de professor.
+
+    Estudo, treino e registro de questões são 99% privados: a pessoa só
+    compartilha isso quando escolhe, dentro de um grupo. Conta de professor não
+    tem esse dado nem deve tê-lo, então a área inteira fecha — inclusive por
+    POST direto, que é como um menu escondido seria contornado.
+
+    Admin não entra aqui: ele é dono do app e tem os próprios registros.
+    """
+
+    @wraps(f)
+    @login_required
+    def wrapper(*args, **kwargs):
+        if current_user.is_professor and not current_user.is_admin:
+            return render_template("professor/area_privada.html"), 403
         return f(*args, **kwargs)
 
     return wrapper

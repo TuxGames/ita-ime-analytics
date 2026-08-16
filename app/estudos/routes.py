@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from ..decorators import bloqueado_para_professor
 from ..extensions import db
 from ..forms import PlanoEstudoForm, RegistroEstudoForm, SessaoTreinoForm
 from ..models import (
@@ -40,6 +41,7 @@ def _semana_atual():
 
 @estudos_bp.route("/")
 @login_required
+@bloqueado_para_professor
 def index():
     hoje = date.today()
     plano = _plano_do_usuario()
@@ -95,6 +97,7 @@ def index():
 
 @estudos_bp.route("/registrar", methods=["GET", "POST"])
 @login_required
+@bloqueado_para_professor
 def registrar():
     form = RegistroEstudoForm()
     data_str = request.args.get("data")
@@ -154,6 +157,7 @@ def registrar():
 
 @estudos_bp.route("/treino")
 @login_required
+@bloqueado_para_professor
 def treino():
     """Cronômetro de questões. O treino roda no navegador; ao finalizar, a pessoa
     pode salvar o resumo da sessão (com matéria e observações opcionais)."""
@@ -169,6 +173,7 @@ def treino():
 
 @estudos_bp.route("/treino/salvar", methods=["POST"])
 @login_required
+@bloqueado_para_professor
 def treino_salvar():
     form = SessaoTreinoForm()
     if form.validate_on_submit():
@@ -196,6 +201,7 @@ def treino_salvar():
 
 @estudos_bp.route("/treino/<int:sessao_id>/excluir", methods=["POST"])
 @login_required
+@bloqueado_para_professor
 def treino_excluir(sessao_id):
     sessao = db.session.get(SessaoTreino, sessao_id)
     if sessao is None or sessao.user_id != current_user.id:
@@ -208,6 +214,7 @@ def treino_excluir(sessao_id):
 
 @estudos_bp.route("/plano", methods=["GET", "POST"])
 @login_required
+@bloqueado_para_professor
 def plano():
     form = PlanoEstudoForm()
 

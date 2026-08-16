@@ -45,6 +45,7 @@ def create_app(config_class=Config) -> Flask:
     from .oficiais.routes import oficiais_bp
     from .admin.routes import admin_bp
     from .grupos.routes import grupos_bp
+    from .professor.routes import professor_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -54,6 +55,7 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(oficiais_bp, url_prefix="/oficiais")
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(grupos_bp, url_prefix="/grupos")
+    app.register_blueprint(professor_bp, url_prefix="/professor")
 
     from .grouping import compor_titulo, rotulo_curto
 
@@ -68,6 +70,25 @@ def create_app(config_class=Config) -> Flask:
     from .versao import VERSAO
 
     app.jinja_env.globals["VERSAO"] = VERSAO
+
+    @app.context_processor
+    def papel_no_template():
+        """`so_professor`: quem tem o papel de leitura e NÃO é admin.
+
+        Context processor, e não `{% set %}` no base.html, porque um `set` no
+        template pai não chega aos blocos dos filhos — e a home é um filho.
+        Isto governa só o que a tela OFERECE; quem recusa de verdade são os
+        decoradores em app/decorators.py.
+        """
+        from flask_login import current_user
+
+        return {
+            "so_professor": (
+                current_user.is_authenticated
+                and current_user.is_professor
+                and not current_user.is_admin
+            )
+        }
 
     def timestamp_br(valor):
         """mtime (float) -> "13/08/2026 18:42". None vira travessão."""

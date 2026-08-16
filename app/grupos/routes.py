@@ -1,6 +1,7 @@
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from ..decorators import bloqueado_para_professor
 from ..extensions import db
 from ..forms import ConvidarMembroForm, GrupoEdicaoForm, GrupoForm
 from ..grupo_evolucao import PERIODOS, evolucao_do_grupo, ranking_de_notas
@@ -29,6 +30,7 @@ def _get_grupo_visivel(grupo_id: int) -> tuple["Grupo", "GrupoMembro"]:
 
 @grupos_bp.route("/")
 @login_required
+@bloqueado_para_professor
 def listar():
     vinculos = db.session.scalars(
         db.select(GrupoMembro)
@@ -40,6 +42,7 @@ def listar():
 
 @grupos_bp.route("/novo", methods=["GET", "POST"])
 @login_required
+@bloqueado_para_professor
 def novo():
     form = GrupoForm()
     if form.validate_on_submit():
@@ -64,6 +67,7 @@ def novo():
 
 @grupos_bp.route("/<int:grupo_id>")
 @login_required
+@bloqueado_para_professor
 def detalhe(grupo_id):
     grupo, vinculo = _get_grupo_visivel(grupo_id)
 
@@ -99,6 +103,7 @@ def detalhe(grupo_id):
 
 @grupos_bp.route("/<int:grupo_id>/editar", methods=["GET", "POST"])
 @login_required
+@bloqueado_para_professor
 def editar(grupo_id):
     """Só o dono renomeia. Mesma validação da criação (o form é o mesmo), e sem
     histórico de nomes: o nome atual é a única verdade."""
@@ -119,6 +124,7 @@ def editar(grupo_id):
 
 @grupos_bp.post("/<int:grupo_id>/convidar")
 @login_required
+@bloqueado_para_professor
 def convidar(grupo_id):
     grupo, vinculo = _get_grupo_visivel(grupo_id)
     if grupo.criado_por != current_user.id:
@@ -162,6 +168,7 @@ def convidar(grupo_id):
 
 @grupos_bp.post("/<int:grupo_id>/aceitar")
 @login_required
+@bloqueado_para_professor
 def aceitar(grupo_id):
     grupo, vinculo = _get_grupo_visivel(grupo_id)
     if vinculo.status != "convidado":
@@ -175,6 +182,7 @@ def aceitar(grupo_id):
 
 @grupos_bp.post("/<int:grupo_id>/recusar")
 @login_required
+@bloqueado_para_professor
 def recusar(grupo_id):
     grupo, vinculo = _get_grupo_visivel(grupo_id)
     if vinculo.status != "convidado":
@@ -188,6 +196,7 @@ def recusar(grupo_id):
 
 @grupos_bp.post("/<int:grupo_id>/sair")
 @login_required
+@bloqueado_para_professor
 def sair(grupo_id):
     grupo, vinculo = _get_grupo_visivel(grupo_id)
     vinculo.status = "saiu"
@@ -199,6 +208,7 @@ def sair(grupo_id):
 
 @grupos_bp.post("/<int:grupo_id>/membro/<int:membro_id>/remover")
 @login_required
+@bloqueado_para_professor
 def remover_membro(grupo_id, membro_id):
     grupo, _vinculo = _get_grupo_visivel(grupo_id)
     if grupo.criado_por != current_user.id:
@@ -217,6 +227,7 @@ def remover_membro(grupo_id, membro_id):
 
 @grupos_bp.post("/<int:grupo_id>/apagar")
 @login_required
+@bloqueado_para_professor
 def apagar(grupo_id):
     grupo, _vinculo = _get_grupo_visivel(grupo_id)
     if grupo.criado_por != current_user.id:

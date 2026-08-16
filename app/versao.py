@@ -13,7 +13,9 @@ O zero à esquerda não é enfeite: é o que faz a versão ordenar certo como te
 Sem ele, `2.3.2` viria DEPOIS de `2.3.18` em qualquer ordenação alfabética —
 que é como versão acaba sendo comparada em nome de arquivo, log e listagem.
 
-O 2.5.00 fechou o cadastro: conta nova so entra com codigo de convite.
+O 2.5.00 fechou o cadastro: conta nova so entra com codigo de convite. No
+2.7.00 o codigo virou credencial de visibilidade, e no 2.8.00 entrou o papel de
+professor — que so olha nota, nunca estudo.
 
 Foi assim que se chegou no 2.4.00: depois do redesign entraram o casamento de
 banca com fase (2.1), os grupos de estudo (2.2), o lote de monograma, renomear
@@ -29,4 +31,4 @@ Um único lugar: quem precisar da versão importa daqui. No Jinja ela chega como
 o global `VERSAO`, registrado em app/__init__.py.
 """
 
-VERSAO = "2.7.00"
+VERSAO = "2.8.00"

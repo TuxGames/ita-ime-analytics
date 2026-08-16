@@ -523,3 +523,30 @@ def deploy_testar_rede():
         rede=testar_github(),
         remoto=sha_remoto(),
     )
+
+
+@admin_bp.post("/convites/professor/<int:user_id>")
+@admin_required
+def alternar_professor(user_id):
+    """Promove/rebaixa uma conta a professor. Só o admin marca.
+
+    Não inventamos um tipo novo de convite: a conta entra por coringa (ou já
+    existe) e é promovida aqui. Um convite "de professor" seria um segundo
+    mecanismo para o mesmo fim, com o risco de alguém virar professor sem
+    ninguém decidir — a promoção explícita mantém a decisão com uma pessoa.
+    """
+    user = db.session.get(User, user_id)
+    if user is None:
+        abort(404)
+    user.is_professor = not user.is_professor
+    db.session.commit()
+    current_app.logger.info(
+        "Papel de professor: admin=%s conta=%s agora=%s",
+        current_user.username, user.username, user.is_professor,
+    )
+    flash(
+        f"{user.username} " + ("agora é professor." if user.is_professor
+                               else "não é mais professor."),
+        "success",
+    )
+    return redirect(url_for("admin.convites"))

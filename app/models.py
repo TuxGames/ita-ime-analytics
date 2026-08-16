@@ -142,6 +142,11 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(32), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
+    # Professor/coordenação: SÓ OLHA. Vê a ficha do aluno, o ranking da turma e
+    # os listões — nunca estudo, treino ou registro de questões, que a pessoa
+    # digitou aqui achando que era dela. Papel distinto de admin: não importa,
+    # não edita, não apaga, não emite código, não mescla aluno.
+    is_professor = db.Column(db.Boolean, nullable=False, default=False)
     must_change_password = db.Column(db.Boolean, nullable=False, default=True)
     # Resgatou um código de convite? Enquanto False a conta não acessa nada além
     # da tela do código e do logout. Default False: conta nova nasce trancada.

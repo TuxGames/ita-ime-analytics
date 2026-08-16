@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "_macros.html" import monograma %}
+{% block title %}{{ ficha.nome }} — Ficha — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ ficha.nome }}</h1>
+    <p class="page-sub">
+      {{ ficha.turma or "sem turma" }}
+      {%- if ficha.serie %} · {{ ficha.serie }}{% endif %}
+      {%- if not ficha.ativo %} · inativo{% endif %}
+    </p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('professor.index') }}">Voltar</a>
+</div>
+
+<section class="card">
+  <div class="stats-grid stats-3">
+    <div class="stat">
+      <p class="stat-value">{{ ficha.resumo.provas }}</p>
+      <p class="stat-label">simulados</p>
+    </div>
+    <div class="stat">
+      <p class="stat-value">{% if ficha.resumo.media is not none %}{{ "%.2f"|format(ficha.resumo.media) }}{% else %}—{% endif %}</p>
+      <p class="stat-label">média</p>
+    </div>
+    <div class="stat">
+      <p class="stat-value">{% if ficha.resumo.melhor is not none %}{{ "%.2f"|format(ficha.resumo.melhor) }}{% else %}—{% endif %}</p>
+      <p class="stat-label">melhor</p>
+    </div>
+  </div>
+  <p class="card-sub">Nota em 0–10, a mesma régua do mural do colégio.</p>
+</section>
+
+{% if ficha.simulados %}
+<section class="card">
+  <h2 class="card-title">Simulados</h2>
+  <ul class="of-linhas">
+    {% for s in ficha.simulados %}
+    <li class="of-linha">
+      <div class="of-linha-head">
+        <span class="of-linha-pos">{% if s.posicao %}{{ s.posicao }}º{% else %}—{% endif %}</span>
+        <span class="of-linha-nome">{{ s.prova }}
+          <span class="serie-chip">{{ s.data.strftime("%d/%m/%Y") }}</span>
+          {%- if s.serie %} <span class="serie-chip">{{ s.serie }}</span>{% endif %}
+        </span>
+        <span class="of-linha-mp">{% if s.nota is not none %}{{ "%.2f"|format(s.nota) }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="chips">
+        {% for materia, dados in s.acertos.items() %}
+        <span class="chip">{{ materia[:3] }} {{ dados.certas }}/{{ dados.total }}</span>
+        {% endfor %}
+        {% if s.total %}<span class="chip">entre {{ s.total }}</span>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% else %}
+<section class="card empty-state">
+  <h2>Sem simulados importados</h2>
+  <p>Quando um ranking com esta pessoa for importado, o histórico aparece aqui.</p>
+</section>
+{% endif %}
+
+{% if ficha.oficiais %}
+<section class="card">
+  <h2 class="card-title">Resultados oficiais</h2>
+  <p class="card-sub">Classificação nacional divulgada pela banca.</p>
+  <ul class="of-simples">
+    {% for o in ficha.oficiais %}
+    <li>
+      <span>{{ o.concurso }} <span class="serie-chip">{{ o.turma }}</span></span>
+      <span>{% if o.classificacao %}<strong>#{{ o.classificacao }}</strong>{% else %}{{ o.status }}{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if ficha.evolucao and ficha.evolucao.tem_dado %}
+<section class="card">
+  <h2 class="card-title">Evolução</h2>
+  <p class="card-sub">
+    Percentil na turma ao longo dos simulados — 100 é a melhor colocação da prova.
+  </p>
+  <div class="chart-box"><canvas id="chart-percentil" role="img" aria-label="Percentil na turma ao longo dos simulados"></canvas></div>
+  {# Mesmo payload que o aluno vê de si: labels, percentil, posicao, materias.
+     Não carrega estudo, treino nem grupo — ver app/ficha.py. #}
+  <script type="application/json" id="evolucao-data">{{ ficha.evolucao|tojson }}</script>
+</section>
+{% endif %}
+
+<section class="card info-card">
+  <p>
+    Esta ficha mostra <strong>só desempenho em prova</strong>. Registro de
+    estudo, treino de questões e grupos são do aluno e não aparecem aqui.
+  </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if ficha.evolucao and ficha.evolucao.tem_dado %}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/evolucao.js') }}" defer></script>
+{% endif %}
+{% endblock %}

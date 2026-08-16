@@ -68,9 +68,17 @@
 {% if not simulados %}
 <section class="card empty-state">
   <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+  {# Conta de coordenação não vai registrar simulado nenhum: mandar ela fazer
+     isso é a home dando uma ordem que não serve para quem está lendo. #}
+  {% if so_professor %}
+  <h2>Nada seu por aqui</h2>
+  <p>Esta conta acompanha o desempenho da turma. O que você veio ver está nas fichas.</p>
+  <a class="btn btn-primary" href="{{ url_for('professor.index') }}">Ver as fichas</a>
+  {% else %}
   <h2>Nenhum simulado ainda</h2>
   <p>Registre seu primeiro simulado para o placar começar a contar.</p>
   <a class="btn btn-primary" href="{{ url_for('simulados.novo') }}">Registrar primeiro simulado</a>
+  {% endif %}
 </section>
 {% else %}
 

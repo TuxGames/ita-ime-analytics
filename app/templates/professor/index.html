@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import monograma %}
+{% block title %}Fichas — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+<section class="board" aria-label="Fichas dos alunos">
+  <div class="board-top">
+    <div>
+      <h1 class="board-title">Fichas</h1>
+      <p class="board-sub">Desempenho de cada aluno reunido num lugar.</p>
+    </div>
+    {{ monograma(current_user.username, "md") }}
+  </div>
+</section>
+
+<section class="card info-card">
+  <p>
+    A ficha mostra <strong>simulados e resultados oficiais</strong> — o mesmo
+    dado que o colégio divulga para a turma. Registro de estudo, treino de
+    questões e grupos <strong>não aparecem</strong>: são do aluno.
+  </p>
+</section>
+
+{% if not alunos %}
+<section class="card empty-state">
+  <h2>Nenhum aluno ainda</h2>
+  <p>Os alunos aparecem sozinhos conforme os rankings e listões são importados.</p>
+</section>
+{% else %}
+<section class="card">
+  <h2 class="card-title">{{ alunos|length }} aluno(s)</h2>
+  <ul class="of-linhas">
+    {% for a in alunos %}
+    <li class="of-linha">
+      <a class="aluno-link" href="{{ url_for('professor.ficha', aluno_id=a.id) }}">
+        <span class="pessoa">
+          {{ monograma(a.nome, "sm") }}
+          <span class="of-linha-nome">{{ a.nome }}
+            {%- if a.turma %} <span class="serie-chip">{{ a.turma }}</span>{% endif %}
+            {%- if a.serie %} <span class="serie-chip">{{ a.serie }}</span>{% endif %}
+            {%- if not a.ativo %} <span class="serie-chip">inativo</span>{% endif %}
+          </span>
+        </span>
+        <span class="chev" aria-hidden="true">›</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

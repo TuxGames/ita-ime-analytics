@@ -42,9 +42,15 @@
       </span>
       {% if item.coringa %}
       <span class="chip chip-forte">coringa · {{ item.coringa.rotulo }}</span>
-      {% else %}
+      {% elif not u.is_professor %}
       <span class="chip">falta vincular</span>
       {% endif %}
+      {% if u.is_professor %}<span class="chip chip-forte">professor</span>{% endif %}
+      <form method="post" action="{{ url_for('admin.alternar_professor', user_id=u.id) }}"
+            data-confirm="{% if u.is_professor %}Tirar o papel de professor de {{ u.username }}?{% else %}Tornar {{ u.username }} professor? Ele verá a ficha dos alunos.{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="linklike">{% if u.is_professor %}tirar professor{% else %}tornar professor{% endif %}</button>
+      </form>
     </li>
     {% endfor %}
   </ul>
