@@ -932,3 +932,31 @@ code { background: var(--blue-soft); padding: 1px 6px; border-radius: 6px; font-
 .rodape { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; }
 .rodape p { margin: 0; font-size: 12px; color: var(--muted); }
 .rodape-versao { font-variant-numeric: tabular-nums; }
+
+/* ── Prosa: texto longo gerado de Markdown (página de termos) ──────────────
+   O HTML vem de scripts/gerar_termos.py e não carrega classe nenhuma, então o
+   estilo desce por tag a partir de .prosa. A CSP 'self' proíbe style inline,
+   que é justamente o motivo de estar tudo aqui. */
+.prosa { max-width: 68ch; margin: 0 auto; color: var(--text); line-height: 1.65; }
+.prosa h1 { font-size: 24px; line-height: 1.25; margin: 0 0 4px; }
+.prosa h2 { font-size: 18px; margin: 30px 0 8px; padding-top: 4px; }
+.prosa h3 { font-size: 15px; margin: 20px 0 6px; color: var(--blue); }
+.prosa p { margin: 0 0 12px; }
+.prosa ul, .prosa ol { margin: 0 0 12px; padding-left: 22px; }
+.prosa li { margin-bottom: 6px; }
+.prosa strong { color: var(--blue); }
+.prosa a { color: var(--blue-mid); }
+.prosa hr { border: 0; border-top: 1px solid var(--border); margin: 26px 0; }
+
+/* A tabela da seção 4 tem cinco linhas e três colunas; no celular ela não cabe
+   sem encolher a fonte, então rola na horizontal em vez de espremer o texto. */
+/* display:block é o que permite o overflow-x — markdown-it não envolve a
+   tabela num contêiner, e envolver à mão faria o gerador editar estrutura. */
+.prosa table { display: block; overflow-x: auto; border-collapse: collapse; margin: 0 0 14px; font-size: 13px; }
+.prosa thead th { text-align: left; background: var(--blue-soft); color: var(--blue); }
+.prosa th, .prosa td { border: 1px solid var(--border); padding: 8px 10px; vertical-align: top; }
+
+@media (max-width: 560px) {
+  .prosa table { font-size: 12px; }
+  .prosa th, .prosa td { padding: 6px 7px; }
+}

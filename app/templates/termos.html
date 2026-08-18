@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Termos de uso — ITA-IME Analytics{% endblock %}
+
+{% block content %}
+{# O conteúdo vem de docs/TERMOS.md, convertido por scripts/gerar_termos.py.
+   Não escreva texto de termos aqui: a fonte é o .md, e duplicar faz os dois
+   divergirem no primeiro ajuste. #}
+<article class="card prosa">
+  {% include "_termos_gerado.html" %}
+</article>
+
+{% if not current_user.is_authenticated %}
+<section class="card info-card">
+  <p>Esta página é pública de propósito: dá para lê-la sem ter conta.</p>
+  <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Entrar</a>
+</section>
+{% endif %}
+{% endblock %}

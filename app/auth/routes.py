@@ -91,9 +91,14 @@ def convite():
 
 @auth_bp.before_app_request
 def force_password_change():
-    """Usuário com senha temporária só acessa a troca de senha e o logout."""
+    """Usuário com senha temporária só acessa a troca de senha e o logout.
+
+    Os termos entram na lista porque a página é pública: seria estranho que a
+    única pessoa impedida de ler o que o site faz com os dados dela fosse quem
+    ainda está com senha temporária.
+    """
     if current_user.is_authenticated and current_user.must_change_password:
-        allowed = {"auth.change_password", "auth.logout", "static"}
+        allowed = {"auth.change_password", "auth.logout", "static", "main.termos"}
         if request.endpoint not in allowed:
             return redirect(url_for("auth.change_password"))
 

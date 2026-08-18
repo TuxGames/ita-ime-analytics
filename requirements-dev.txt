@@ -2,3 +2,8 @@
 # Uso: pip install -r requirements.txt -r requirements-dev.txt && pytest
 -r requirements.txt
 pytest==8.3.3
+
+# Só para scripts/gerar_termos.py, que converte docs/TERMOS.md na build. O HTML
+# gerado é commitado, então produção NÃO precisa disto — e por isso ele está
+# aqui e não no requirements.txt.
+markdown-it-py==4.2.0

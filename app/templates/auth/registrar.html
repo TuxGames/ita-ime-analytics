@@ -17,6 +17,10 @@
       {{ field(form.confirm_password, autocomplete="new-password") }}
       <button type="submit" class="btn btn-primary btn-block">Criar conta</button>
     </form>
+    <p class="auth-note">
+      Ao criar conta você concorda com os
+      <a href="{{ url_for('main.termos') }}">termos de uso e privacidade</a>.
+    </p>
     <p class="auth-note">Já tem conta? <a href="{{ url_for('auth.login') }}">Entrar</a></p>
   </div>
 </div>

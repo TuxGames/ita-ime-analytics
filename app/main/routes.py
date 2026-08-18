@@ -286,3 +286,15 @@ def baixar_meus_dados():
         f'attachment; filename="itaime-{current_user.username}.json"'
     )
     return resposta
+
+
+@main_bp.route("/termos")
+def termos():
+    """Termos de uso e aviso de privacidade. PÚBLICA, sem login.
+
+    Sem `@login_required` de propósito: o caso central é a seção 5 — alguém que
+    aparece num ranking importado, nunca criou conta aqui e quer entender o que
+    o site faz com o nome dele. Exigir conta para ler isso seria exatamente o
+    contrário do que o texto promete.
+    """
+    return render_template("termos.html")
