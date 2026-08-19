@@ -536,10 +536,14 @@ class SimuladoTurma(db.Model):
     # Só a objetiva é importável hoje; o campo existe para a discursiva entrar
     # depois sem outra migration de schema.
     fase = db.Column(db.String(20), nullable=False, default="objetiva")
-    # Alguns títulos trazem DUAS datas ("Simulado IME S6 - 11/07/2026 -
-    # 14/04/2026"). Não sabemos qual é qual, e é justamente essa a pista para
-    # descobrir se a coluna "Média" daquela planilha é da fase ou já é final.
-    # Jogar fora seria perder a evidência, então guardamos sem interpretar.
+    # A segunda data do título, quando existe ("Simulado IME S6 - 11/07/2026 -
+    # 14/04/2026"). GUARDADA E IGNORADA — não use para nada.
+    #
+    # A 1ª fase do IME S6 apareceu e é de 04/07/2026, não 14/04. A segunda data
+    # não aponta para a outra fase: 14/04 é abril, e parece resto de template
+    # (o ITA S5 foi 11/04). Chegamos a supor que ela casaria as fases; não
+    # casa. Para emparelhar fases use (banca, rotulo) — a data não serve, nem a
+    # primeira (as duas fases do IME S6 têm datas diferentes: 04/07 e 11/07).
     data_secundaria = db.Column(db.Date, nullable=True)
     fonte = db.Column(db.String(40), nullable=True)
     materias_csv = db.Column(db.String(200), nullable=False, default="")
@@ -585,7 +589,19 @@ class SimuladoTurma(db.Model):
 
     @property
     def nome(self) -> str:
-        return f"{self.banca} {self.rotulo}"
+        """"ITA S5 · 2ª fase" — com a FASE, e isso não é enfeite.
+
+        As duas fases da mesma prova compartilham banca, rótulo e data, então
+        sem a fase os dois registros ficam com nome idêntico. Isto é lido por
+        seis lugares, e dois deles são confirmações de EXCLUSÃO ("Excluir ITA
+        S5 INTEIRO, com todas as turmas") — um diálogo destrutivo que não diz
+        qual das duas provas vai sumir é um jeito de apagar a errada.
+
+        Mesma função que nomeia o simulado pessoal, para os nomes não
+        divergirem entre as telas."""
+        from .grouping import compor_titulo
+
+        return compor_titulo(self.banca, self.rotulo, self.fase)
 
     # Recortes com filtro de turma opcional (por isso métodos, não properties).
     def presentes(self, turma=None) -> list["SimuladoTurmaLinha"]:
@@ -704,11 +720,29 @@ class SimuladoTurmaLinha(db.Model):
     # mentir. Os conjuntos de matérias também diferem: no ITA S5 o discursivo
     # tem POR e RED e não tem ING; a objetiva tem ING e não tem POR nem RED.
     notas_json = db.Column(db.Text, nullable=True)
-    # A coluna de média do bloco desta planilha, COPIADA. Deliberadamente sem
-    # carimbo de significado: no ITA sabemos que é a média do discursivo, mas
-    # na planilha do IME S6 há uma coluna "Média" só, que não se reproduz a
-    # partir das seis matérias dela — pode já ser a média final. Até o colégio
-    # responder, o app guarda o número e não afirma o que ele é.
+    # A coluna de média do bloco desta planilha, COPIADA. Sem carimbo de
+    # significado, e no IME isso é definitivo, não provisório.
+    #
+    # No ITA a régua é conhecida e fecha linha a linha:
+    #     discursivo   = (2·MAT + 2·QUÍ + 2·FIS + POR + RED) / 8
+    #     média final  = 0,8 × discursivo + 0,2 × objetiva   (falta = zero)
+    #
+    # No IME, NÃO. Com as duas fases do S6 em mãos (12 linhas), cinco famílias
+    # de hipótese foram testadas e todas morreram:
+    #   - a fórmula do ITA aplicada ao IME previa 6,35 e 2,20 na objetiva; os
+    #     valores reais são 6,50 e 4,50 — o segundo erra por mais de 2 pontos;
+    #   - ponderação exatas × línguas exige peso de língua diferente em cada
+    #     linha (0,116 numa, 0,226 noutra);
+    #   - ponderação em dois grupos direto sobre a coluna dá peso NEGATIVO para
+    #     exatas;
+    #   - 0,8·D + 0,2·O não é sequer combinação convexa: há linha cuja média
+    #     (5,10) é maior que o D calculado (4,84) E que a objetiva (4,50);
+    #   - combinar por matéria antes da média acerta uma linha e erra a
+    #     seguinte por 0,24 — padrão de quem ajusta curva, não de quem achou
+    #     a regra.
+    #
+    # Por isso: para o IME nada é calculado nem conferido contra conta nossa.
+    # Um aviso que dispara em toda linha treina o usuário a ignorar aviso.
     media_informada = db.Column(db.Float, nullable=True)
     # A coluna MÉDIA FINAL, só quando a planilha traz as duas fases lado a lado
     # e a nomeia explicitamente. NULL quando não existe — nunca calculada.

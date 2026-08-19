@@ -8,7 +8,7 @@ import pytest
 from app.models import SimuladoTurma
 from app.oficiais_import import ErroImport
 from app.simulado_turma_import import aplicar, parse
-from tests.conftest import payload_simulado
+from tests.conftest import payload_simulado, payload_simulado_discursivo
 
 
 def _parse(dados, data_padrao=None):
@@ -35,7 +35,7 @@ def test_parse_caminho_feliz(app):
 
 
 def test_parse_aceita_fase_discursiva(app):
-    dados = _parse(payload_simulado(fase="discursiva"))
+    dados = _parse(payload_simulado_discursivo())
     assert dados["fase"] == "discursiva"
 
 
@@ -162,7 +162,7 @@ def test_as_duas_fases_sao_provas_distintas(app, db, admin):
         db.session.scalar(db.select(SimuladoTurma)).linhas
     )
 
-    aplicar(db, _parse(payload_simulado("novata", fase="discursiva")), admin.id)
+    aplicar(db, _parse(payload_simulado_discursivo("novata")), admin.id)
     db.session.commit()
 
     provas = db.session.scalars(

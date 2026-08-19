@@ -202,6 +202,59 @@ def payload_simulado(turma="novata", rotulo="S3", banca="ITA", **ajustes):
     return dados
 
 
+def payload_simulado_discursivo(turma="novata", rotulo="S3", banca="ITA", **ajustes):
+    """Payload da 2ª FASE: notas decimais 0–10, sem total de questões.
+
+    Espelha a planilha real do ITA S5: o bloco discursivo tem POR e RED e NÃO
+    tem ING (a objetiva tem o contrário), e a ordem das colunas é MAT · QUÍ ·
+    FIS. Os nomes batem com os de `payload_simulado` de propósito, para que as
+    duas fases caiam na mesma pessoa.
+
+    As médias são as que a fórmula do ITA produz — (2·MAT + 2·QUÍ + 2·FIS +
+    POR + RED) / 8 — para que o aviso de divergência fique quieto por padrão.
+    Quem quer testar o aviso mexe na média, não nas notas.
+    """
+    dados = {
+        "tipo": "simulado",
+        "fase": "discursiva",
+        "banca": banca,
+        "rotulo": rotulo,
+        "data": "2026-04-11",
+        "data_secundaria": None,
+        "turma": turma,
+        "fonte": "GGE",
+        "materias": ["MAT", "QUIM", "FIS", "PORT", "RED"],
+        "materias_media": None,
+        "resultados": [
+            {
+                "nome": f"ALUNO {turma.upper()} UM",
+                "serie": "3º ANO",
+                "status": "presente",
+                # (2·6,00 + 2·6,35 + 2·3,40 + 6,67 + 7,20) / 8 = 5,67
+                "notas": {"MAT": 6.00, "QUIM": 6.35, "FIS": 3.40,
+                          "PORT": 6.67, "RED": 7.20},
+                "media_oficial": 5.67,
+            },
+            {
+                "nome": f"ALUNO {turma.upper()} DOIS",
+                "serie": "2º ANO",
+                "status": "presente",
+                # (2·3,80 + 2·4,35 + 2·4,30 + 6,00 + 5,00) / 8 = 4,49
+                "notas": {"MAT": 3.80, "QUIM": 4.35, "FIS": 4.30,
+                          "PORT": 6.00, "RED": 5.00},
+                "media_oficial": 4.49,
+            },
+            {
+                "nome": f"ALUNO {turma.upper()} TRES",
+                "serie": "CURSO",
+                "status": "ausente",
+            },
+        ],
+    }
+    dados.update(ajustes)
+    return dados
+
+
 @pytest.fixture
 def oficial():
     return payload_oficial

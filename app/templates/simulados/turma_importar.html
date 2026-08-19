@@ -33,16 +33,40 @@
   </p>
   {% endif %}
 
+  {% if d.avisos %}
+  <div class="aviso-substitui">
+    <p>
+      <strong>{{ d.avisos|length }}</strong> linha(s) com média que não bate com a
+      fórmula do ITA. <strong>Isso não impede o import</strong> — o número da
+      planilha é o que vale. Só confira se a leitura pegou a célula certa:
+    </p>
+    <ul>
+      {% for aviso in d.avisos %}<li>{{ aviso }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   <ul class="preview-meta">
     <li><span>Prova</span><strong>{{ d.banca }} {{ d.rotulo }}</strong></li>
     <li><span>Data</span><strong>{{ d.data.strftime("%d/%m/%Y") }}</strong></li>
     <li><span>Fase</span><strong>{{ d.fase }}</strong></li>
     <li><span>Turma</span><strong>{{ d.turma }}</strong></li>
     {% if d.fonte %}<li><span>Fonte</span><strong>{{ d.fonte }}</strong></li>{% endif %}
+    {% if d.questoes %}
     <li>
       <span>Questões</span>
       <strong>{% for m in d.materias %}{{ m.value[:3] }} {{ d.questoes[m.name] }}{% if not loop.last %} · {% endif %}{% endfor %}</strong>
     </li>
+    {% else %}
+    {# 2ª fase: nota decimal 0–10, sem total de questões. #}
+    <li><span>Notas</span><strong>decimais, 0–10</strong></li>
+    {% endif %}
+    {% if d.data_secundaria %}
+    <li>
+      <span>2ª data no título</span>
+      <strong>{{ d.data_secundaria.strftime("%d/%m/%Y") }} (guardada, não usada)</strong>
+    </li>
+    {% endif %}
     {% if d.materias_media %}
     <li>
       <span>MÉDIA oficial</span>
@@ -63,7 +87,7 @@
         <tr>
           <th>Nome</th><th>Série</th>
           {% for m in d.materias %}<th>{{ m.value[:3] }}</th>{% endfor %}
-          <th>Média</th><th>Geral</th>
+          <th>Média</th>{% if d.questoes %}<th>Geral</th>{% else %}<th>Final</th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -72,10 +96,20 @@
           <td>{{ ln.nome }}</td>
           <td class="td-status">{{ ln.serie or "—" }}</td>
           {% for m in d.materias %}
-          <td>{% if ln.status == "ausente" %}—{% else %}{{ ln.acertos.get(m.name, "—") }}{% endif %}</td>
+          <td>
+            {%- if ln.status == "ausente" -%}—
+            {%- elif d.questoes -%}{{ ln.acertos.get(m.name, "—") }}
+            {%- elif ln.notas.get(m.name) is not none -%}{{ "%.2f"|format(ln.notas[m.name]) }}
+            {%- else -%}—{%- endif -%}
+          </td>
           {% endfor %}
-          <td>{% if ln.media_oficial is not none %}{{ "%.2f"|format(ln.media_oficial) }}{% else %}—{% endif %}</td>
+          {% set media = ln.media_oficial if d.questoes else ln.media_informada %}
+          <td>{% if media is not none %}{{ "%.2f"|format(media) }}{% else %}—{% endif %}</td>
+          {% if d.questoes %}
           <td>{% if ln.geral_oficial is not none %}{{ "%g"|format(ln.geral_oficial) }}{% else %}—{% endif %}</td>
+          {% else %}
+          <td>{% if ln.media_final_informada is not none %}{{ "%.2f"|format(ln.media_final_informada) }}{% else %}—{% endif %}</td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>

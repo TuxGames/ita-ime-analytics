@@ -11,6 +11,7 @@
 
   var dados = JSON.parse(bruto.textContent);
   var questoes = dados.questoes || {};
+  var discursiva = dados.fase === "discursiva";
   var selecionadas = carregarSelecao();
 
   // ---------- Persistência da escolha ----------
@@ -36,6 +37,19 @@
   // matéria (a mesma conta que o colégio faz). No ITA, com 12 questões em
   // tudo, dá exatamente a MÉDIA do colégio; no IME, pesa mais quem tem mais
   // questões (ex.: MAT/FIS com 15 pesam mais que QUIM com 10).
+  // Na 2ª fase (discursiva) não há total de questões: cada matéria já vem com
+  // nota 0–10, e a régua do recorte é a MÉDIA SIMPLES das marcadas. Isso NÃO
+  // reproduz a média do colégio de propósito — o número oficial é o copiado da
+  // planilha. Este aqui serve para ordenar dentro do filtro escolhido.
+  function notaDiscursiva(notas) {
+    var soma = 0, quantas = 0;
+    for (var i = 0; i < selecionadas.length; i++) {
+      var valor = notas[selecionadas[i]];
+      if (valor !== undefined && valor !== null) { soma += valor; quantas += 1; }
+    }
+    return quantas ? Math.round((soma / quantas) * 100) / 100 : null;
+  }
+
   function nota(acertos) {
     var somaAcertos = 0, somaQuestoes = 0;
     for (var i = 0; i < selecionadas.length; i++) {
@@ -53,7 +67,9 @@
   function ranquear() {
     var pares = [];
     dados.linhas.forEach(function (linha) {
-      var valor = nota(linha.acertos);
+      var valor = discursiva
+        ? notaDiscursiva(linha.notas || {})
+        : nota(linha.acertos);
       if (valor !== null) pares.push({ linha: linha, nota: valor });
     });
     pares.sort(function (a, b) { return b.nota - a.nota; });
@@ -124,7 +140,11 @@
       aplicar();
     });
     var texto = document.createElement("span");
-    texto.textContent = materia.label + " (" + (questoes[materia.name] || "?") + "q)";
+    // Na discursiva não existe contagem de questões — mostrar "(?q)" seria
+    // inventar uma pergunta sem resposta.
+    texto.textContent = discursiva
+      ? materia.label
+      : materia.label + " (" + (questoes[materia.name] || "?") + "q)";
     label.appendChild(input);
     label.appendChild(texto);
     caixa.appendChild(label);

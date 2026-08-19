@@ -43,7 +43,7 @@
     <a class="card of-card" href="{{ url_for('simulados.turma_detalhe', turma_id=t.id) }}">
       <div class="of-card-top">
         <div>
-          <p class="of-conc">{{ t.banca }} {{ t.rotulo }}</p>
+          <p class="of-conc">{{ t.nome }}</p>
           <p class="of-turma">
             {% for turma in t.turmas_presentes %}
             {{ t.total_de(turma) }} {{ TURMA_CURTO[turma]|lower }}{% if not loop.last %} · {% endif %}

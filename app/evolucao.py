@@ -44,16 +44,33 @@ def _mediana(valores: list) -> float | None:
     return round((limpos[meio - 1] + limpos[meio]) / 2, 1)
 
 
-def _mediana_materia_da_turma(turma: "SimuladoTurma", materia_name: str) -> float | None:
+def _valor_da_materia(turma: "SimuladoTurma", linha, materia_name: str) -> float | None:
+    """Desempenho numa matéria, em régua única 0–100, seja qual for a fase.
+
+    Sem isto, a 2ª fase sumia do gráfico por matéria em SILÊNCIO: a conta era
+    `100 × certas / total_questoes`, e numa linha discursiva não há nem
+    `certas` nem `total_questoes`, então o ponto virava None sem erro nenhum.
+
+    A 2ª fase já vem em 0–10, então ×10 põe as duas fases na mesma escala e o
+    gráfico fica comparável — que é o ponto de um gráfico de evolução."""
+    if turma.fase == "discursiva":
+        nota = linha.notas.get(materia_name)
+        return None if nota is None else 10.0 * nota
+
     total_q = turma.questoes.get(materia_name)
-    if not total_q:
+    certas = linha.acertos.get(materia_name)
+    if not total_q or certas is None:
         return None
-    percentuais = []
-    for linha in turma.presentes():
-        certas = linha.acertos.get(materia_name)
-        if certas is not None:
-            percentuais.append(100.0 * certas / total_q)
-    return _mediana(percentuais)
+    return 100.0 * certas / total_q
+
+
+def _mediana_materia_da_turma(turma: "SimuladoTurma", materia_name: str) -> float | None:
+    valores = [
+        v
+        for linha in turma.presentes()
+        if (v := _valor_da_materia(turma, linha, materia_name)) is not None
+    ]
+    return _mediana(valores)
 
 
 def _tendencia(valores: list) -> dict | None:
@@ -124,9 +141,8 @@ def evolucao_do_aluno(aluno_id: int, materias=None) -> dict:
         valores, medianas = [], []
         for ln in linhas:
             turma = ln.turma_obj
-            total_q = turma.questoes.get(nome)
-            certas = ln.acertos.get(nome)
-            valores.append(round(100.0 * certas / total_q, 1) if total_q and certas is not None else None)
+            valor = _valor_da_materia(turma, ln, nome)
+            valores.append(None if valor is None else round(valor, 1))
             medianas.append(_mediana_materia_da_turma(turma, nome))
         materias_dados[nome] = {
             "label": Materia[nome].value,

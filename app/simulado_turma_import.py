@@ -1,8 +1,18 @@
 """Validação do JSON de importação do ranking de um simulado da turma.
 
-Prompt de extração em docs/PROMPT-EXTRACAO-SIMULADO.md. Aqui os números são
-QUANTIDADES DE ACERTOS (inteiros), não notas — e o total de questões vem do
-padrão da banca (models.QUESTOES_PADRAO), não do JSON.
+Duas fases, dois formatos de número, dois prompts de extração:
+
+- 1ª fase (objetiva), docs/PROMPT-EXTRACAO-SIMULADO.md — os valores são
+  QUANTIDADES DE ACERTOS (inteiros) sobre um total de questões que vem do
+  padrão da banca (models.QUESTOES_PADRAO), não do JSON.
+- 2ª fase (discursiva), docs/PROMPT-EXTRACAO-2FASE.md — os valores são NOTAS
+  DECIMAIS de 0 a 10. Não existe total de questões, e por isso não existe
+  `questoes` nem `geral_oficial` aqui.
+
+Os conjuntos de matérias DIFEREM entre as fases do mesmo simulado: no ITA S5 o
+discursivo tem POR e RED e não tem ING; a objetiva tem ING e não tem POR nem
+RED. Cada fase é uma prova própria (a `fase` está na chave única), então cada
+uma carrega o próprio cabeçalho sem conflito.
 """
 
 import json
@@ -22,8 +32,12 @@ from .validacao import (
     _texto,
     validar_acertos,
     validar_geral_oficial,
+    validar_nota,
     validar_status,
 )
+
+# Escala da nota na 2ª fase. A mesma régua do mural do colégio.
+ESCALA_DISCURSIVA = 10.0
 
 
 def _inteiro(valor, campo):
@@ -32,8 +46,16 @@ def _inteiro(valor, campo):
     return valor
 
 
-def _questoes_da_banca(banca: str, materias, do_json) -> dict:
-    """Total de questões por matéria: o que veio no JSON, senão o padrão da banca."""
+def _questoes_da_banca(banca: str, materias, do_json, fase="objetiva") -> dict:
+    """Total de questões por matéria: o que veio no JSON, senão o padrão da banca.
+
+    Vazio na 2ª fase: lá a nota já nasce em 0–10 e não há questões para contar.
+    Sem esta saída, o import da discursiva morria no cabeçalho reclamando que
+    falta o total de questões de Português, Inglês e Redação — e "resolver"
+    inventando totais faria a validação de acertos rejeitar 5,70 por não ser
+    inteiro. A estrutura não deve fingir que existe um total."""
+    if fase == "discursiva":
+        return {}
     if do_json:
         if not isinstance(do_json, dict):
             raise ErroImport('"questoes" precisa ser um objeto código→total (ou null).')
@@ -63,7 +85,73 @@ def _questoes_da_banca(banca: str, materias, do_json) -> dict:
     return {m.name: questoes[m.name] for m in materias}
 
 
-def _linha(bruta, indice, materias, questoes, turma):
+def _linha_discursiva(bruta, onde, nome, serie, turma, status, materias):
+    """Uma pessoa na 2ª fase: notas decimais 0–10, sem total de questões.
+
+    Duas diferenças que NÃO são detalhe em relação à objetiva:
+
+    1. Zerar tudo é legítimo aqui. Na objetiva, quem zera todas as matérias
+       quase certamente faltou (chute acerta alguma), e o import recusa pedindo
+       status "ausente". Na discursiva zerar é comum — a planilha do ITA S5 tem
+       uma linha 0,00 0,00 0,20 0,00 0,00, e há quem zere tudo e ainda tenha
+       média. Aplicar aqui a regra da objetiva recusaria dado real.
+    2. Célula vazia não é zero. Ausência de matéria é erro de extração e para o
+       import; 0,00 é nota. Por isso toda matéria do cabeçalho é obrigatória.
+    """
+    brutas = bruta.get("notas") or {}
+    if not isinstance(brutas, dict) or not brutas:
+        raise ErroImport(
+            f"{onde} ({nome}): faltam as notas por matéria. Se a pessoa não fez "
+            'a discursiva, marque status "ausente" — zero não é ausência.'
+        )
+
+    permitidas = {m.name for m in materias}
+    notas = {}
+    for codigo, valor in brutas.items():
+        materia = materia_por_codigo(codigo)
+        if materia is None:
+            raise ErroImport(f"{onde} ({nome}): matéria desconhecida {codigo!r}.")
+        if materia.name not in permitidas:
+            raise ErroImport(
+                f"{onde} ({nome}): {materia.value} não está na lista 'materias' do "
+                "cabeçalho. Cuidado com as colunas calculadas (MÉDIA, MÉDIA FINAL)."
+            )
+        nota = _numero_decimal(valor, f"nota de {materia.value} ({onde}, {nome})")
+        # Mesma validação de escala que os listões oficiais usam.
+        validar_nota(nota, ESCALA_DISCURSIVA, materia, onde, nome)
+        notas[materia.name] = nota
+
+    faltando = [m.value for m in materias if m.name not in notas]
+    if faltando:
+        raise ErroImport(
+            f"{onde} ({nome}): faltam as notas de " + ", ".join(faltando) + ". "
+            "Célula vazia não é zero — confira a extração."
+        )
+
+    # NÃO há checagem de "zerou em tudo": ver o docstring.
+
+    def numero(chave):
+        valor = bruta.get(chave)
+        return None if valor is None else _numero_decimal(valor, f"{onde}: {chave}")
+
+    return {
+        "nome": nome, "nome_norm": normalizar_nome(nome), "serie": serie,
+        "turma": turma, "status": status, "acertos": {}, "notas": notas,
+        # `media_oficial` e `geral_oficial` são da objetiva e têm contrato
+        # exato; o número da discursiva vive em campo próprio, sem carimbo.
+        "media_oficial": None, "geral_oficial": None,
+        "media_informada": numero("media_oficial"),
+        "media_final_informada": numero("media_final"),
+    }
+
+
+def _numero_decimal(valor, campo):
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        raise ErroImport(f'"{campo}" precisa ser número (veio {valor!r}).')
+    return float(valor)
+
+
+def _linha(bruta, indice, materias, questoes, turma, fase="objetiva"):
     onde = f"resultado #{indice}"
     if not isinstance(bruta, dict):
         raise ErroImport(f"{onde}: cada item de 'resultados' precisa ser um objeto.")
@@ -78,9 +166,13 @@ def _linha(bruta, indice, materias, questoes, turma):
     if status == "ausente":
         return {
             "nome": nome, "nome_norm": normalizar_nome(nome), "serie": serie,
-            "turma": turma, "status": status, "acertos": {},
+            "turma": turma, "status": status, "acertos": {}, "notas": {},
             "media_oficial": None, "geral_oficial": None,
+            "media_informada": None, "media_final_informada": None,
         }
+
+    if fase == "discursiva":
+        return _linha_discursiva(bruta, onde, nome, serie, turma, status, materias)
 
     brutos = bruta.get("acertos") or {}
     if not isinstance(brutos, dict) or not brutos:
@@ -127,9 +219,66 @@ def _linha(bruta, indice, materias, questoes, turma):
     return {
         "nome": nome, "nome_norm": normalizar_nome(nome), "serie": serie,
         # Turma vem do cabeçalho e vale para todas as pessoas desta lista.
-        "turma": turma, "status": status, "acertos": acertos,
+        "turma": turma, "status": status, "acertos": acertos, "notas": {},
         "media_oficial": numero("media_oficial"), "geral_oficial": geral,
+        # Campos da 2ª fase: sempre nulos aqui. A objetiva tem `media_oficial`,
+        # que é outra coisa — conferida contra a soma dos acertos.
+        "media_informada": None, "media_final_informada": None,
     }
+
+
+# Pesos da MÉDIA do bloco discursivo do ITA, observados na planilha do S5 e
+# conferidos linha a linha, inclusive nos extremos (0,00 0,00 0,20 0,00 0,00 ->
+# 0,40/8 = 0,05). Exatas pesam o dobro de Português e Redação.
+#
+# Isto NÃO é fonte de nada: nenhum número do app sai daqui. Serve só para
+# AVISAR quando a média copiada da planilha discorda da conta — sinal de que a
+# leitura errou uma célula. Se o colégio mudar o peso, o copiado continua certo
+# e este aviso vira ruído, e aí a resposta é apagar estes pesos, não recalcular.
+PESOS_MEDIA_ITA_DISCURSIVA = {
+    "MATEMATICA": 2, "QUIMICA": 2, "FISICA": 2, "PORTUGUES": 1, "REDACAO": 1,
+}
+
+# Divergência tolerada antes de avisar: a planilha mostra 2 casas.
+TOLERANCIA_MEDIA = 0.01
+
+
+def _avisos_de_media(banca, fase, materias, linhas) -> list:
+    """Avisos de leitura sobre a coluna de média. NUNCA bloqueia, nunca corrige.
+
+    Só para o ITA na 2ª fase, e só quando o cabeçalho traz exatamente as cinco
+    matérias que a fórmula conhecida cobre. Fora disso o app se cala.
+
+    Por que não para o IME: com as duas fases do S6 em mãos, CINCO famílias de
+    hipótese foram testadas contra 12 linhas e todas morreram — a fórmula do
+    ITA previa 6,50 e 4,50 na objetiva e errou a segunda por mais de 2 pontos;
+    ponderação em dois grupos dá peso negativo para exatas; e há linha cuja
+    média (5,10) é maior que o discursivo calculado (4,84) E que a objetiva
+    (4,50), então não é nem combinação convexa das duas. Um aviso que dispara
+    em toda linha treina o usuário a ignorar aviso — que é pior que não avisar.
+    """
+    if fase != "discursiva" or banca.strip().upper() != "ITA":
+        return []
+    if {m.name for m in materias} != set(PESOS_MEDIA_ITA_DISCURSIVA):
+        return []
+
+    avisos = []
+    for linha in linhas:
+        informada = linha.get("media_informada")
+        if linha["status"] != "presente" or informada is None:
+            continue
+        soma = sum(
+            PESOS_MEDIA_ITA_DISCURSIVA[nome] * nota
+            for nome, nota in linha["notas"].items()
+        )
+        calculada = soma / sum(PESOS_MEDIA_ITA_DISCURSIVA.values())
+        if abs(calculada - informada) > TOLERANCIA_MEDIA:
+            avisos.append(
+                f"{linha['nome']}: a planilha diz média {informada:.2f}, mas a "
+                f"fórmula do ITA dá {calculada:.2f}. Confira a leitura das notas "
+                "dessa linha. O import segue com o número da planilha."
+            )
+    return avisos
 
 
 def parse(texto: str, data_padrao=None) -> dict:
@@ -189,6 +338,20 @@ def parse(texto: str, data_padrao=None) -> dict:
                 "ranking costuma vir em DD-MM-AAAA."
             )
 
+    # Segunda data do título, quando existe. GUARDADA E IGNORADA: a 1ª fase do
+    # IME S6 é de 04/07 e a 2ª traz "11/07 - 14/04" — a segunda data não aponta
+    # para a outra fase, parece resto de template. Não serve para casar fases
+    # nem para deduzir data nenhuma; quem casa fases é (banca, rotulo).
+    bruta_secundaria = dados.get("data_secundaria")
+    data_secundaria = None
+    if bruta_secundaria not in (None, ""):
+        try:
+            data_secundaria = date.fromisoformat(str(bruta_secundaria).strip())
+        except ValueError:
+            raise ErroImport(
+                '"data_secundaria" precisa estar no formato AAAA-MM-DD (ou null).'
+            )
+
     codigos = dados.get("materias")
     if not isinstance(codigos, list) or not codigos:
         raise ErroImport('"materias" precisa ser uma lista com pelo menos uma matéria.')
@@ -202,7 +365,7 @@ def parse(texto: str, data_padrao=None) -> dict:
         vistas.add(materia.name)
         materias.append(materia)
 
-    questoes = _questoes_da_banca(banca, materias, dados.get("questoes"))
+    questoes = _questoes_da_banca(banca, materias, dados.get("questoes"), fase)
 
     materias_media = []
     for codigo in dados.get("materias_media") or []:
@@ -220,7 +383,8 @@ def parse(texto: str, data_padrao=None) -> dict:
         raise ErroImport('"resultados" precisa ser uma lista com pelo menos uma pessoa.')
 
     linhas = [
-        _linha(b, i, materias, questoes, turma) for i, b in enumerate(brutos, start=1)
+        _linha(b, i, materias, questoes, turma, fase)
+        for i, b in enumerate(brutos, start=1)
     ]
 
     vistos = set()
@@ -232,9 +396,11 @@ def parse(texto: str, data_padrao=None) -> dict:
     resumo = {s: sum(1 for ln in linhas if ln["status"] == s) for s in SimuladoTurmaLinha.STATUS}
     return {
         "banca": banca, "rotulo": rotulo, "data": data_prova, "turma": turma,
+        "data_secundaria": data_secundaria,
         "fase": fase, "fonte": fonte, "materias": materias,
         "materias_media": materias_media, "questoes": questoes,
         "linhas": linhas, "resumo": resumo,
+        "avisos": _avisos_de_media(banca, fase, materias, linhas),
     }
 
 
@@ -303,6 +469,7 @@ def aplicar(db, dados: dict, user_id: int) -> SimuladoTurma:
             banca=dados["banca"],
             rotulo=dados["rotulo"],
             data=dados["data"],
+            data_secundaria=dados["data_secundaria"],
             fase=dados["fase"],
             fonte=dados["fonte"],
             created_by=user_id,
@@ -329,7 +496,10 @@ def aplicar(db, dados: dict, user_id: int) -> SimuladoTurma:
             status=bruta["status"],
             media_oficial=bruta["media_oficial"],
             geral_oficial=bruta["geral_oficial"],
+            media_informada=bruta["media_informada"],
+            media_final_informada=bruta["media_final_informada"],
         )
         linha.set_acertos(bruta["acertos"])
+        linha.set_notas(bruta["notas"])
         simulado.linhas.append(linha)
     return simulado

@@ -22,7 +22,7 @@ from app.models import Aluno, Concurso, Simulado, SimuladoTurma
 from app.simulado_sync import simulado_pessoal_da_prova
 from app.simulado_turma_import import aplicar, parse
 
-from .conftest import payload_simulado
+from .conftest import payload_simulado, payload_simulado_discursivo
 
 
 def _parse(payload):
@@ -38,7 +38,7 @@ def _concurso(db, admin):
 
 def _as_duas_fases(db, admin, turma="novata"):
     aplicar(db, _parse(payload_simulado(turma)), admin.id)
-    aplicar(db, _parse(payload_simulado(turma, fase="discursiva")), admin.id)
+    aplicar(db, _parse(payload_simulado_discursivo(turma)), admin.id)
     db.session.commit()
     provas = db.session.scalars(db.select(SimuladoTurma)).all()
     objetiva = next(p for p in provas if p.fase == "objetiva")
@@ -98,7 +98,7 @@ def test_preview_do_import_acha_a_prova_da_fase_certa(client, db, admin, logar):
 
     resposta = client.post(
         "/simulados/turma/importar",
-        data={"payload": json.dumps(payload_simulado("novata", fase="discursiva"))},
+        data={"payload": json.dumps(payload_simulado_discursivo("novata"))},
     )
 
     assert resposta.status_code == 200
@@ -243,3 +243,31 @@ def test_a_listagem_de_rankings_mostra_as_duas(client, db, admin, logar):
 
     assert resposta.status_code == 200
     assert "Traceback" not in resposta.get_data(as_text=True)
+
+
+def test_o_nome_da_prova_carrega_a_fase(app, db, admin):
+    """`SimuladoTurma.nome` é lido por seis lugares, e DOIS são confirmações de
+    exclusão ("Excluir ITA S5 INTEIRO, com todas as turmas").
+
+    Com as duas fases no banco, um diálogo destrutivo que não diz qual das duas
+    provas vai sumir é um jeito de apagar a errada. A suíte inteira passou
+    verde com esse nome ambíguo — foi a varredura de tela que pegou.
+    """
+    objetiva, discursiva = _as_duas_fases(db, admin)
+
+    assert objetiva.nome != discursiva.nome
+    assert "1ª fase" in objetiva.nome
+    assert "2ª fase" in discursiva.nome
+
+
+def test_as_telas_de_ranking_distinguem_as_fases(client, db, admin, logar):
+    objetiva, discursiva = _as_duas_fases(db, admin)
+    logar(admin)
+
+    listagem = client.get("/simulados/turma/").get_data(as_text=True)
+    assert objetiva.nome in listagem
+    assert discursiva.nome in listagem
+
+    for prova in (objetiva, discursiva):
+        corpo = client.get(f"/simulados/turma/{prova.id}").get_data(as_text=True)
+        assert prova.nome in corpo, f"a tela de {prova.fase} não se identifica"

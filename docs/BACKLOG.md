@@ -116,16 +116,45 @@ compromisso. Atualizado em 10/08/2026.
   - Falta o prompt de extração para o bloco DISCURSIVO, hoje explicitamente
     ignorado pelo `PROMPT-EXTRACAO-SIMULADO.md`.
 
-- **Média final combinando as duas fases.** Decidido: o app calcula e mostra
-  quando as duas fases do mesmo simulado estiverem importadas.
+- **Média final combinando as duas fases.** REVISADO em 19/08/2026, depois de
+  ver as planilhas reais. O app **copia e exibe**; não calcula.
 
-  A conta observada nos prints do S5 é `0,8 × discursivo + 0,2 × objetivo`.
-  **Mas isso foi inferido de duas linhas de uma planilha, não é regra
-  publicada.** Aplique aqui a mesma lição da média do IME: se a planilha trouxer
-  a coluna MÉDIA FINAL, **guarde e exiba o número dela**; só calcule quando a
-  coluna não existir, e deixe claro na tela quando o valor é calculado e não
-  copiado. Se o colégio mudar o peso, o número copiado continua certo e o
-  calculado não.
+  **ITA — fórmulas conhecidas, usadas só para CONFERIR:**
+
+      MÉDIA(discursivo) = (2·MAT + 2·QUÍ + 2·FIS + POR + RED) / 8
+      MÉDIA FINAL       = 0,8 × discursivo + 0,2 × objetiva
+
+  As duas fecham linha a linha no S5, inclusive nos extremos
+  (`0,00 0,00 0,20 0,00 0,00 → 0,40/8 = 0,05`) e nas faltas — quem faltou a uma
+  fase entra com **zero**, não é excluído (`3,14 e 0,00 → 2,51`). Implementado
+  como AVISO no preview do import (`_avisos_de_media`): diverge mais de 0,01 →
+  avisa, sem bloquear e sem sobrescrever.
+
+  **IME — fórmula desconhecida, e isso é definitivo.** Com as duas fases do S6
+  em mãos (12 linhas), cinco famílias de hipótese morreram:
+
+  1. Fórmula do ITA aplicada ao IME: previa **6,35 e 2,20** na objetiva; os
+     valores reais são **6,50 e 4,50** — a segunda erra por mais de 2 pontos.
+  2. Ponderação exatas × línguas: exige peso de língua diferente em cada linha
+     (0,116 numa, 0,226 noutra).
+  3. Ponderação em dois grupos direto sobre a coluna: dá peso **negativo** para
+     exatas.
+  4. `0,8·D + 0,2·O` não é nem combinação convexa: há linha cuja média (5,10) é
+     **maior** que o discursivo calculado (4,84) **e** que a objetiva (4,50).
+  5. Combinar por matéria antes da média: acerta uma linha e erra a seguinte
+     por 0,24 — padrão de ajuste de curva, não de regra encontrada.
+
+  Portanto o IME **nunca** é conferido contra conta nossa. Um aviso que dispara
+  em toda linha treina o usuário a ignorar aviso, que é pior que não avisar.
+
+  **`data_secundaria` não casa fases.** A 1ª fase do IME S6 é 04/07/2026, mas o
+  título da 2ª diz "11/07/2026 - 14/04/2026" — a segunda data é abril, parece
+  resto de template. Guardada e ignorada. Quem casa fases é `(banca, rotulo)`;
+  a data não serve nem como primeira (as duas fases têm datas diferentes).
+
+  **A média da 1ª fase do IME é `acertos/40×10`**, confirmada pelo gabarito
+  (MAT 15 · FÍS 15 · QUÍM 10): 26→6,50, 23→5,75, 20→5,00. É exatamente o que
+  `SimuladoTurma.nota_de` já fazia, e `QUESTOES_PADRAO["IME"]` bate.
 
 - **Ressincronização de simulados.** Hoje o "Sincronizar" só pula o que já
   existe. Falta atualizar um simulado pessoal quando o import de origem for

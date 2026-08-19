@@ -32,10 +32,25 @@
     </div>
     {% for m in materias %}
     <div class="form-group">
+      {% if t.fase == "discursiva" %}
+      <label class="form-label">Nota {{ m.value }} (0–10)</label>
+      <input class="input" type="text" name="notas_{{ m.name }}" value="{% if ln.notas.get(m.name) is not none %}{{ ln.notas[m.name] }}{% endif %}">
+      {% else %}
       <label class="form-label">Acertos {{ m.value }} (de {{ t.questoes.get(m.name) }})</label>
       <input class="input" type="text" name="acertos_{{ m.name }}" value="{% if ln.acertos.get(m.name) is not none %}{{ ln.acertos[m.name] }}{% endif %}">
+      {% endif %}
     </div>
     {% endfor %}
+    {% if t.fase == "discursiva" %}
+    <div class="form-group">
+      <label class="form-label">Média da planilha (copiada, não calculada)</label>
+      <input class="input" type="text" name="media_informada" value="{% if ln.media_informada is not none %}{{ ln.media_informada }}{% endif %}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Média final da planilha (se houver a coluna)</label>
+      <input class="input" type="text" name="media_final_informada" value="{% if ln.media_final_informada is not none %}{{ ln.media_final_informada }}{% endif %}">
+    </div>
+    {% else %}
     <div class="form-group">
       <label class="form-label">Média oficial</label>
       <input class="input" type="text" name="media_oficial" value="{% if ln.media_oficial is not none %}{{ ln.media_oficial }}{% endif %}">
@@ -44,6 +59,7 @@
       <label class="form-label">Geral oficial</label>
       <input class="input" type="text" name="geral_oficial" value="{% if ln.geral_oficial is not none %}{{ ln.geral_oficial }}{% endif %}">
     </div>
+    {% endif %}
     <button type="submit" class="btn btn-outline btn-sm">Salvar edição</button>
   </form>
 </details>
@@ -53,7 +69,7 @@
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>{{ t.banca }} {{ t.rotulo }}</h1>
+    <h1>{{ t.nome }}</h1>
     <p class="page-sub">
       {{ t.data.strftime("%d/%m/%Y") }}
       {%- if t.fase != "objetiva" %} · {{ t.fase }}{% endif %}
@@ -107,12 +123,22 @@
     <h2 class="card-title">Matérias que contam</h2>
     <span class="card-sub-inline" id="recorte-resumo"></span>
   </div>
+  {% if t.fase == "discursiva" %}
+  <p class="card-sub">
+    Marque as matérias e o ranking se refaz. Aqui cada matéria já vem com nota
+    0–10, então a nota do recorte é a <strong>média simples</strong> das
+    marcadas. <strong>Ela não é a média do colégio</strong> — essa vem na
+    coluna da planilha e aparece ao lado de cada pessoa como
+    <em>média da planilha</em>.
+  </p>
+  {% else %}
   <p class="card-sub">
     Marque as matérias e o ranking se refaz. A nota é (soma dos acertos) / (soma do
     total de questões) das matérias marcadas, em escala 0–10 — proporcional ao número
     de questões de cada matéria, a mesma conta do colégio{% if t.banca|upper == "ITA" %}
     (no ITA, com 12 questões em tudo, dá o mesmo número da MÉDIA do colégio){% endif %}.
   </p>
+  {% endif %}
 
   <div class="recorte-presets">
     {% if t.materias_media %}
@@ -158,10 +184,22 @@
       </div>
       <div class="chips">
         {% for m in materias %}
-        {% if ln.acertos.get(m.name) is not none %}
+        {% if t.fase == "discursiva" %}
+        {% if ln.notas.get(m.name) is not none %}
+        <span class="chip">{{ m.value[:3] }} {{ "%.2f"|format(ln.notas[m.name]) }}</span>
+        {% endif %}
+        {% elif ln.acertos.get(m.name) is not none %}
         <span class="chip">{{ m.value[:3] }} {{ ln.acertos[m.name] }}/{{ t.questoes.get(m.name) }}</span>
         {% endif %}
         {% endfor %}
+        {# O número do colégio, copiado. Marcado como "da planilha" porque a
+           nota grande à direita é a do recorte, calculada pelo app. #}
+        {% if ln.media_informada is not none %}
+        <span class="chip chip-forte">média da planilha {{ "%.2f"|format(ln.media_informada) }}</span>
+        {% endif %}
+        {% if ln.media_final_informada is not none %}
+        <span class="chip chip-forte">final {{ "%.2f"|format(ln.media_final_informada) }}</span>
+        {% endif %}
       </div>
       {{ editar_linha(ln) }}
     </li>

@@ -43,6 +43,7 @@ from ..simulado_sync import (
     simulados_desatualizados,
     sincronizar_linha,
 )
+from ..simulado_turma_import import ESCALA_DISCURSIVA
 from ..simulado_turma_import import aplicar as aplicar_turma
 from ..simulado_turma_import import parse as parse_turma
 from ..validacao import (
@@ -50,6 +51,7 @@ from ..validacao import (
     validar_acertos,
     validar_geral_oficial,
     validar_nome_unico,
+    validar_nota,
     validar_status,
 )
 from ..vinculo import nome_ja_usado, revincular
@@ -527,13 +529,24 @@ def turma_detalhe(turma_id):
 
     # O JS recalcula o ranking no recorte de matérias; só as linhas do filtro de
     # turma ativo vão para ele, para as posições renumerarem dentro do recorte.
+    # `fase` vai junto porque o cálculo do JS é outro na 2ª fase: lá não há
+    # total de questões, e o valor de cada matéria já é a nota em 0–10.
     dados_js = {
+        "fase": turma.fase,
         "questoes": turma.questoes,
         "materias": [{"name": m.name, "label": m.value} for m in materias],
         "padrao": [m.name for m in recorte],
-        "chave": f"itaime_recorte_{turma.banca}",
+        # A chave do localStorage separa as fases: os conjuntos de matérias
+        # diferem (o discursivo do ITA tem POR e RED e não tem ING), então uma
+        # seleção salva numa fase não faz sentido na outra.
+        "chave": f"itaime_recorte_{turma.banca}_{turma.fase}",
         "linhas": [
-            {"id": ln.id, "acertos": ln.acertos, "eu": ln.user_id == current_user.id}
+            {
+                "id": ln.id,
+                "acertos": ln.acertos,
+                "notas": ln.notas,
+                "eu": ln.user_id == current_user.id,
+            }
             for ln in turma.presentes(filtro)
         ],
     }
@@ -636,8 +649,22 @@ def _aplicar_edicao_linha_turma(linha: SimuladoTurmaLinha, form) -> None:
 
     status = validar_status(form.get("status"), SimuladoTurmaLinha.STATUS, onde, nome)
 
-    acertos = {}
-    if status == "presente":
+    discursiva = turma_obj.fase == "discursiva"
+
+    def _opcional_float(campo, rotulo):
+        bruto = (form.get(campo) or "").strip()
+        if not bruto:
+            return None
+        try:
+            return float(bruto.replace(",", "."))
+        except ValueError:
+            raise ErroImport(f"{onde} ({nome}): {rotulo} precisa ser número.")
+
+    # Cada fase tem o SEU campo de nota. Editar acertos numa prova discursiva
+    # (ou notas numa objetiva) gravaria o número na coluna errada, e aí a tela
+    # mostraria "5.70/12" — nota decimal fingindo ser acerto de questão.
+    acertos, notas = {}, {}
+    if status == "presente" and not discursiva:
         for materia in turma_obj.materias:
             bruto = (form.get(f"acertos_{materia.name}") or "").strip()
             if not bruto:
@@ -650,20 +677,20 @@ def _aplicar_edicao_linha_turma(linha: SimuladoTurmaLinha, form) -> None:
             total = turma_obj.questoes.get(materia.name, 0)
             validar_acertos(certas, total, materia, onde, nome)
             acertos[materia.name] = certas
-
-    def _opcional_float(campo, rotulo):
-        bruto = (form.get(campo) or "").strip()
-        if not bruto:
-            return None
-        try:
-            return float(bruto.replace(",", "."))
-        except ValueError:
-            raise ErroImport(f"{onde} ({nome}): {rotulo} precisa ser número.")
+    elif status == "presente":
+        for materia in turma_obj.materias:
+            valor = _opcional_float(f"notas_{materia.name}", f"a nota de {materia.value}")
+            if valor is None:
+                continue
+            validar_nota(valor, ESCALA_DISCURSIVA, materia, onde, nome)
+            notas[materia.name] = valor
 
     media_oficial = _opcional_float("media_oficial", "a média oficial")
     geral_oficial = _opcional_float("geral_oficial", "o GERAL")
+    media_informada = _opcional_float("media_informada", "a média da planilha")
+    media_final = _opcional_float("media_final_informada", "a média final da planilha")
 
-    if status == "presente":
+    if status == "presente" and not discursiva:
         validar_geral_oficial(geral_oficial, sum(acertos.values()), onde, nome)
 
     # Escopo é a PROVA INTEIRA (todas as turmas), não só a turma da linha.
@@ -675,8 +702,11 @@ def _aplicar_edicao_linha_turma(linha: SimuladoTurmaLinha, form) -> None:
     linha.serie = serie
     linha.status = status
     linha.set_acertos(acertos)
+    linha.set_notas(notas)
     linha.media_oficial = media_oficial
     linha.geral_oficial = geral_oficial
+    linha.media_informada = media_informada
+    linha.media_final_informada = media_final
 
 
 @simulados_bp.post("/turma/linha/<int:linha_id>/editar")
