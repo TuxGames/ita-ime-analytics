@@ -13,6 +13,7 @@ simulado_turma_import. Isto é para o admin bater o olho depois de importar.
 from collections import defaultdict
 
 from .extensions import db
+from .visibilidade import so_provas_visiveis
 from .models import (
     TURMA_CURTO,
     ResultadoLinha,
@@ -32,8 +33,12 @@ def _nivel(serie):
 
 def _linhas_de_simulado():
     """[(data, prova, linha)] de todos os rankings, em ordem cronológica."""
+    # `tudo=True`: a conferência roda no terminal, sem usuário logado, e quem
+    # a executa é o dono do banco. Sem o escape explícito ela silenciaria as
+    # provas reservadas e passaria a mentir sobre a saúde do dado.
     provas = db.session.scalars(
-        db.select(SimuladoTurma).order_by(SimuladoTurma.data)
+        so_provas_visiveis(db.select(SimuladoTurma), tudo=True)
+        .order_by(SimuladoTurma.data)
     ).all()
     return [(p.data, p, ln) for p in provas for ln in p.linhas]
 
@@ -121,7 +126,8 @@ def contagem_por_turma() -> dict:
     """Quantas pessoas por turma em cada prova/listão, para o admin conferir."""
     provas = []
     for prova in db.session.scalars(
-        db.select(SimuladoTurma).order_by(SimuladoTurma.data.desc())
+        so_provas_visiveis(db.select(SimuladoTurma), tudo=True)
+        .order_by(SimuladoTurma.data.desc())
     ):
         provas.append(
             {

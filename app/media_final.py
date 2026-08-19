@@ -26,6 +26,7 @@ da 2ª fase traz 14/04, que não é a data de fase nenhuma).
 
 from .extensions import db
 from .models import SimuladoTurma, SimuladoTurmaLinha
+from .visibilidade import pode_ver_prova
 
 # Pesos do bloco discursivo do ITA, observados no S5 e conferidos linha a linha.
 # Só usados no caso 2, quando a planilha não trouxe a coluna pronta.
@@ -72,21 +73,27 @@ def _fase_irma(prova: "SimuladoTurma", fase: str) -> "SimuladoTurma | None":
     )
 
 
-def media_final_da_linha(linha: "SimuladoTurmaLinha") -> tuple[float, str] | None:
+def media_final_da_linha(linha: "SimuladoTurmaLinha", user=None) -> tuple[float, str] | None:
     """`(valor, origem)` com origem `"copiada"` ou `"calculada"`, ou None.
 
     A origem não é enfeite: a tela precisa dizer qual é qual, senão um número
     calculado com fórmula observada passa por número oficial do colégio.
     """
+    prova = linha.turma_obj
+    # A média final vive na linha da 2ª fase. Se essa fase não existe para quem
+    # está olhando, o número dela também não — um valor que a pessoa não
+    # consegue auditar contra nenhuma tela é pior que valor nenhum.
+    if not pode_ver_prova(prova, user):
+        return None
+
     if linha.media_final_informada is not None:
         return (linha.media_final_informada, "copiada")
 
-    prova = linha.turma_obj
     if prova.fase != "discursiva" or prova.banca.strip().upper() not in BANCAS_COM_FORMULA:
         return None
 
     objetiva = _fase_irma(prova, "objetiva")
-    if objetiva is None:
+    if not pode_ver_prova(objetiva, user):
         return None
 
     # A pessoa precisa existir na outra fase. Não estar na lista é diferente de

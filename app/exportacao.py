@@ -10,6 +10,7 @@ Duas famílias de export:
 """
 
 from .extensions import db
+from .visibilidade import so_linhas_visiveis
 from .models import (
     RegistroEstudo,
     ResultadoLinha,
@@ -33,7 +34,11 @@ def exportar_dados_usuario(user: "User") -> dict:
         db.select(ResultadoLinha).filter_by(user_id=user.id)
     ).all()
     ranking_linhas = db.session.scalars(
-        db.select(SimuladoTurmaLinha).filter_by(user_id=user.id)
+        # O JSON de "baixar meus dados" é uma tela como outra qualquer: se a
+        # prova não existe para esta pessoa, não existe no arquivo dela.
+        so_linhas_visiveis(
+            db.select(SimuladoTurmaLinha).filter_by(user_id=user.id)
+        )
     ).all()
 
     return {

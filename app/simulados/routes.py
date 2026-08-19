@@ -54,6 +54,11 @@ from ..validacao import (
     validar_nota,
     validar_status,
 )
+from ..visibilidade import (
+    pode_ver_prova,
+    so_linhas_visiveis,
+    so_provas_visiveis,
+)
 from ..vinculo import nome_ja_usado, revincular
 
 simulados_bp = Blueprint("simulados", __name__)
@@ -379,8 +384,14 @@ def _avisar_qualidade() -> None:
 
 
 def _get_turma(turma_id: int) -> SimuladoTurma:
+    """A prova, ou 404.
+
+    404 e não 403 de propósito: para quem não é admin, a fase reservada não
+    EXISTE. Um 403 confirmaria que há uma prova ali — e a rota fechada é o que
+    torna isto diferente de esconder o link. Todas as telas de ranking passam
+    por aqui, então fechar neste ponto fecha detalhe, edição e exclusão."""
     turma = db.session.get(SimuladoTurma, turma_id)
-    if turma is None:
+    if not pode_ver_prova(turma):
         abort(404)
     return turma
 
@@ -394,13 +405,18 @@ def turma_listar():
         # A fase desempata: as duas fases da mesma prova têm data, banca e
         # rótulo iguais, e sem isto ficariam coladas em ordem arbitrária,
         # parecendo import duplicado.
-        db.select(SimuladoTurma).order_by(
+        so_provas_visiveis(db.select(SimuladoTurma)).order_by(
             SimuladoTurma.data.desc(), SimuladoTurma.banca, SimuladoTurma.rotulo,
             SimuladoTurma.fase.desc(),
         )
     ).all()
+    # `minhas` só decide se a tela mostra o aviso de "você não está vinculado".
+    # Ainda assim filtra: uma presença numa prova reservada não pode nem servir
+    # de indício de que ela existe.
     minhas = db.session.scalars(
-        db.select(SimuladoTurmaLinha).filter_by(user_id=current_user.id)
+        so_linhas_visiveis(
+            db.select(SimuladoTurmaLinha).filter_by(user_id=current_user.id)
+        )
     ).all()
     return render_template(
         "simulados/turma_list.html",

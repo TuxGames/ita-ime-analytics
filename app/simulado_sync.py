@@ -14,6 +14,7 @@ Nada aqui dá commit: quem comita é a rota, como no resto do projeto.
 """
 
 from .extensions import db
+from .visibilidade import pode_ver_prova, so_linhas_visiveis
 from .grouping import banca_curta, casar_concurso
 from .models import (
     Concurso,
@@ -44,6 +45,10 @@ def linhas_pendentes(user_id: int) -> list["SimuladoTurmaLinha"]:
         )
         .order_by(SimuladoTurma.data)
     )
+    # Fase reservada nunca entra na sincronização. É o pior caminho de
+    # vazamento: o número atravessa para dentro do Simulado pessoal e depois
+    # vira gráfico, sem passar por nenhuma tela de ranking.
+    query = so_linhas_visiveis(query)
     if ja_trazidas:
         query = query.filter(SimuladoTurmaLinha.id.notin_(ja_trazidas))
     return db.session.scalars(query).all()
@@ -149,6 +154,10 @@ def sincronizar_linha(linha: "SimuladoTurmaLinha", concurso: "Concurso", user_id
     nesta prova, ou já existe um simulado MANUAL do usuário com o mesmo rótulo
     (nunca sobrescreve o que a pessoa digitou à mão)."""
     turma = linha.turma_obj
+    # Cinto de segurança: mesmo que alguém chegue aqui com uma linha de fase
+    # reservada (POST direto, chamada nova), nada é gravado na conta.
+    if not pode_ver_prova(turma):
+        return None
     calculado = valores_do_ranking(linha, concurso)
     if calculado is None:
         return None

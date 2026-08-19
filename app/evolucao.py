@@ -9,6 +9,7 @@ consulta, outro sujeito.
 
 from .extensions import db
 from .grouping import compor_titulo
+from .visibilidade import so_linhas_visiveis
 from .models import Materia, SimuladoTurma, SimuladoTurmaLinha
 
 
@@ -89,12 +90,27 @@ def _tendencia(valores: list) -> dict | None:
     return {"valores": [round(slope * i + intercept, 1) for i in range(len(valores))]}
 
 
-def linhas_do_aluno_em_ordem(aluno_id: int) -> list["SimuladoTurmaLinha"]:
-    """As presenças do aluno nos rankings de simulado, mais antiga primeiro."""
+def linhas_do_aluno_em_ordem(aluno_id: int, user=None) -> list["SimuladoTurmaLinha"]:
+    """As presenças do aluno nos rankings, mais antiga primeiro.
+
+    `user` decide o que aparece: fase reservada só existe para o admin. O
+    parâmetro é explícito porque o RESULTADO depende de quem pergunta — deixar
+    isso só no contexto implícito da requisição esconderia o fato. Na web fica
+    None e vale o `current_user`; fora dela (teste, script) o padrão é o
+    fechado, e quem precisa de tudo diz de quem é a permissão."""
+    # `so_linhas_visiveis` aqui cobre TRÊS telas de uma vez: /evolucao, a
+    # evolução que o admin vê do aluno, e a ficha do professor — que reusa este
+    # mesmo cálculo. Filtrar em cada uma delas seria o caminho de esquecer uma.
     return db.session.scalars(
-        db.select(SimuladoTurmaLinha)
-        .join(SimuladoTurma, SimuladoTurmaLinha.turma_id == SimuladoTurma.id)
-        .filter(SimuladoTurmaLinha.aluno_id == aluno_id, SimuladoTurmaLinha.status == "presente")
+        so_linhas_visiveis(
+            db.select(SimuladoTurmaLinha)
+            .join(SimuladoTurma, SimuladoTurmaLinha.turma_id == SimuladoTurma.id)
+            .filter(
+                SimuladoTurmaLinha.aluno_id == aluno_id,
+                SimuladoTurmaLinha.status == "presente",
+            ),
+            user,
+        )
         # Desempate explícito: as duas fases da mesma prova têm a MESMA data, e
         # sem isto a ordem entre elas ficaria por conta do banco. Objetiva
         # antes de discursiva é a ordem em que a pessoa fez as provas.
@@ -102,13 +118,13 @@ def linhas_do_aluno_em_ordem(aluno_id: int) -> list["SimuladoTurmaLinha"]:
     ).all()
 
 
-def evolucao_do_aluno(aluno_id: int, materias=None) -> dict:
+def evolucao_do_aluno(aluno_id: int, materias=None, user=None) -> dict:
     """Monta a série cronológica de um aluno: posição/percentil, acertos por
     matéria, e a mediana da turma por matéria (para comparar "fui mal em
     química" com "estou X% abaixo da mediana em química").
 
     `materias`: recorte da Fase D (lista de Materia) ou None para "todas"."""
-    linhas = linhas_do_aluno_em_ordem(aluno_id)
+    linhas = linhas_do_aluno_em_ordem(aluno_id, user)
 
     # A fase entra no rótulo porque as duas fases da mesma prova compartilham
     # banca, rótulo E data: sem ela o gráfico mostraria dois pontos escritos

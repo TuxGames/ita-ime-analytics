@@ -6,6 +6,7 @@ from flask import Blueprint, Response, flash, redirect, render_template, request
 from flask_login import current_user, login_required
 
 from ..evolucao import evolucao_do_aluno
+from ..visibilidade import so_linhas_visiveis
 from ..exportacao import exportar_dados_usuario
 from ..extensions import db
 from ..forms import MateriasPerfilForm
@@ -241,7 +242,13 @@ def perfil():
         db.select(db.func.count(ResultadoLinha.id)).filter_by(user_id=current_user.id)
     )
     total_rankings = db.session.scalar(
-        db.select(db.func.count(SimuladoTurmaLinha.id)).filter_by(user_id=current_user.id)
+        # Até a CONTAGEM vaza: "você aparece em 4 rankings" com 3 visíveis
+        # conta que existe um quarto.
+        so_linhas_visiveis(
+            db.select(db.func.count(SimuladoTurmaLinha.id)).filter_by(
+                user_id=current_user.id
+            )
+        )
     )
     return render_template(
         "perfil.html",

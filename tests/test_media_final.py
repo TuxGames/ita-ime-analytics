@@ -1,5 +1,10 @@
 """Média final: copiada primeiro, calculada só em último caso, IME nunca.
 
+Todas as chamadas passam `admin` porque a 2ª fase é RESERVADA ao admin enquanto
+a coordenação não confirmar como o colégio calcula — ver app/visibilidade.py.
+Para qualquer outra conta a resposta é None, e `tests/test_2fase_so_admin.py` é
+quem trava isso.
+
 A regra em uma frase: se a planilha traz a coluna MÉDIA FINAL, é esse número e
 acabou. O cálculo existe como plano B para planilha que não traga — e quando
 ele roda, a tela precisa dizer que aquilo é calculado.
@@ -50,10 +55,10 @@ def test_media_final_da_planilha_e_copiada(app, db, admin):
     prova = aplicar(db, _parse(ITA_S5_DISCURSIVO), admin.id)
     db.session.commit()
 
-    assert media_final_da_linha(_linha(prova, "PESSOA A")) == (5.65, "copiada")
+    assert media_final_da_linha(_linha(prova, "PESSOA A"), admin) == (5.65, "copiada")
     # A PESSOA B não tem média final conhecida no material recebido — e sem a
     # outra fase importada não há como calcular. None é a resposta honesta.
-    assert media_final_da_linha(_linha(prova, "PESSOA B")) is None
+    assert media_final_da_linha(_linha(prova, "PESSOA B"), admin) is None
 
 
 def test_a_copiada_ganha_mesmo_com_as_duas_fases_importadas(app, db, admin):
@@ -63,7 +68,7 @@ def test_a_copiada_ganha_mesmo_com_as_duas_fases_importadas(app, db, admin):
     prova = aplicar(db, _parse(ITA_S5_DISCURSIVO), admin.id)
     db.session.commit()
 
-    assert media_final_da_linha(_linha(prova, "PESSOA A")) == (5.65, "copiada")
+    assert media_final_da_linha(_linha(prova, "PESSOA A"), admin) == (5.65, "copiada")
 
 
 def test_a_copiada_ganha_mesmo_se_discordar_da_formula(app, db, admin):
@@ -75,7 +80,7 @@ def test_a_copiada_ganha_mesmo_se_discordar_da_formula(app, db, admin):
     prova = aplicar(db, _parse(payload), admin.id)
     db.session.commit()
 
-    assert media_final_da_linha(_linha(prova, "PESSOA A")) == (9.99, "copiada")
+    assert media_final_da_linha(_linha(prova, "PESSOA A"), admin) == (9.99, "copiada")
 
 
 # --------------------------------------------------------------------------
@@ -90,10 +95,10 @@ def test_sem_a_coluna_calcula_e_marca_como_calculada(app, db, admin):
     prova = aplicar(db, _parse(_sem_coluna_final(ITA_S5_DISCURSIVO)), admin.id)
     db.session.commit()
 
-    assert media_final_da_linha(_linha(prova, "PESSOA A")) == (5.65, "calculada")
+    assert media_final_da_linha(_linha(prova, "PESSOA A"), admin) == (5.65, "calculada")
     # 0,8 × 4,49 + 0,2 × 3,61 = 4,31. Aqui a conta é do app, não da planilha:
     # esta pessoa não tem média final publicada no material recebido.
-    assert media_final_da_linha(_linha(prova, "PESSOA B")) == (4.31, "calculada")
+    assert media_final_da_linha(_linha(prova, "PESSOA B"), admin) == (4.31, "calculada")
 
 
 def test_sem_a_outra_fase_nao_calcula_nada(app, db, admin):
@@ -101,7 +106,7 @@ def test_sem_a_outra_fase_nao_calcula_nada(app, db, admin):
     prova = aplicar(db, _parse(_sem_coluna_final(ITA_S5_DISCURSIVO)), admin.id)
     db.session.commit()
 
-    assert media_final_da_linha(_linha(prova, "PESSOA A")) is None
+    assert media_final_da_linha(_linha(prova, "PESSOA A"), admin) is None
 
 
 def test_quem_nao_esta_na_outra_lista_nao_recebe_calculo(app, db, admin):
@@ -112,7 +117,7 @@ def test_quem_nao_esta_na_outra_lista_nao_recebe_calculo(app, db, admin):
     db.session.commit()
 
     # PESSOA C só existe no bloco discursivo.
-    assert media_final_da_linha(_linha(prova, "PESSOA C")) is None
+    assert media_final_da_linha(_linha(prova, "PESSOA C"), admin) is None
 
 
 def test_ausente_na_discursiva_entra_como_zero(app, db, admin):
@@ -130,7 +135,7 @@ def test_ausente_na_discursiva_entra_como_zero(app, db, admin):
     db.session.commit()
 
     # 0,8 × 0 + 0,2 × 3,61 = 0,72 — o número que a planilha mostra.
-    assert media_final_da_linha(_linha(prova, "PESSOA D")) == (0.72, "calculada")
+    assert media_final_da_linha(_linha(prova, "PESSOA D"), admin) == (0.72, "calculada")
 
 
 # --------------------------------------------------------------------------
@@ -145,7 +150,7 @@ def test_o_ime_nunca_recebe_media_final_calculada(app, db, admin):
     db.session.commit()
 
     for nome in ("PEDRO", "EDUARDO"):
-        assert media_final_da_linha(_linha(prova, nome)) is None
+        assert media_final_da_linha(_linha(prova, nome), admin) is None
 
 
 def test_o_ime_ainda_exibe_a_coluna_se_a_planilha_trouxer(app, db, admin):
@@ -156,7 +161,7 @@ def test_o_ime_ainda_exibe_a_coluna_se_a_planilha_trouxer(app, db, admin):
     prova = aplicar(db, _parse(payload), admin.id)
     db.session.commit()
 
-    assert media_final_da_linha(_linha(prova, "PEDRO")) == (4.87, "copiada")
+    assert media_final_da_linha(_linha(prova, "PEDRO"), admin) == (4.87, "copiada")
 
 
 def test_a_1a_fase_nao_tem_media_final(app, db, admin):
@@ -164,7 +169,7 @@ def test_a_1a_fase_nao_tem_media_final(app, db, admin):
     prova = aplicar(db, _parse(ITA_S5_OBJETIVA), admin.id)
     db.session.commit()
 
-    assert media_final_da_linha(_linha(prova, "PESSOA A")) is None
+    assert media_final_da_linha(_linha(prova, "PESSOA A"), admin) is None
 
 
 # --------------------------------------------------------------------------

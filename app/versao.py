@@ -24,6 +24,11 @@ fase dos simulados** (nota decimal, fase na chave da prova, import discursivo e
 média final). São mudanças de identidade do app, não de funcionalidade solta —
 por isso o primeiro número, e não o segundo.
 
+O `3.0.01` fecha a 2ª fase ao público antes do deploy: ela fica pronta e
+visível SÓ para o admin, até a coordenação confirmar como o colégio calcula
+nota e média com 2ª fase. Correção de escopo sobre um lote já pronto, então
+sobe o terceiro número. Ver app/visibilidade.py.
+
 Foi assim que se chegou no 2.4.00: depois do redesign entraram o casamento de
 banca com fase (2.1), os grupos de estudo (2.2), o lote de monograma, renomear
 grupo e placar de notas (2.3), e agora o redesign das 29 telas restantes —
@@ -38,4 +43,4 @@ Um único lugar: quem precisar da versão importa daqui. No Jinja ela chega como
 o global `VERSAO`, registrado em app/__init__.py.
 """
 
-VERSAO = "3.0.00"
+VERSAO = "3.0.01"

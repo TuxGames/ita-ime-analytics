@@ -53,13 +53,18 @@ def alunos_para_ficha() -> list[dict]:
     ]
 
 
-def ficha_do_aluno(aluno: "Aluno", materias=None) -> dict:
+def ficha_do_aluno(aluno: "Aluno", materias=None, user=None) -> dict:
     """Histórico de NOTAS do aluno. Não toca em estudo, treino nem grupo.
 
     Monta tudo à mão de propósito: nada de devolver o `Aluno` cru, que daria
     ao template um caminho para `aluno.user` e de lá para o resto do app.
+
+    `user` decide quais fases aparecem. O professor NÃO vê a 2ª fase: ele não
+    é admin, e o número não está confirmado com a coordenação — ver
+    app/visibilidade.py. Como a ficha reusa `linhas_do_aluno_em_ordem` e
+    `evolucao_do_aluno`, basta repassar para os três lugares fecharem juntos.
     """
-    linhas = linhas_do_aluno_em_ordem(aluno.id)
+    linhas = linhas_do_aluno_em_ordem(aluno.id, user)
 
     simulados = []
     for linha in linhas:
@@ -114,7 +119,7 @@ def ficha_do_aluno(aluno: "Aluno", materias=None) -> dict:
         "simulados": simulados,
         "oficiais": oficiais,
         # Reuso, não cópia: a mesma conta que o aluno vê de si mesmo.
-        "evolucao": evolucao_do_aluno(aluno.id, materias),
+        "evolucao": evolucao_do_aluno(aluno.id, materias, user),
         "resumo": {
             "provas": len(simulados),
             "media": round(sum(notas) / len(notas), 2) if notas else None,

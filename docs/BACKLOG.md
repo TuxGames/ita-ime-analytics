@@ -156,6 +156,20 @@ compromisso. Atualizado em 10/08/2026.
   (MAT 15 · FÍS 15 · QUÍM 10): 26→6,50, 23→5,75, 20→5,00. É exatamente o que
   `SimuladoTurma.nota_de` já fazia, e `QUESTOES_PADRAO["IME"]` bate.
 
+- **Liberar a 2ª fase ao público.** BLOQUEADA em 19/08/2026, na 3.0.01. Está
+  pronta e funcionando, mas visível só para o admin — ele importa, olha,
+  confere e corrige; para todo o resto do mundo a prova discursiva não existe
+  (404 na rota, fora da listagem, fora da evolução, fora da sincronização,
+  fora do JSON de exportação).
+
+  **Condição de saída:** a coordenação confirmar como o colégio calcula nota e
+  média com 2ª fase. Enquanto as fórmulas do IME não fecharem, nenhum aluno vê
+  um número que ninguém consegue auditar.
+
+  **Como liberar:** esvaziar `FASES_RESERVADAS` em `app/visibilidade.py`.
+  `tests/test_2fase_so_admin.py` falha em bloco — essa é a lista exata do que
+  volta a ficar visível. Conferir um por um e apagar o arquivo.
+
 - **Ressincronização de simulados.** Hoje o "Sincronizar" só pula o que já
   existe. Falta atualizar um simulado pessoal quando o import de origem for
   corrigido — a FK `turma_linha_id` já deixa isso possível.

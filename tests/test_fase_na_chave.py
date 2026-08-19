@@ -200,11 +200,14 @@ def test_a_fase_exata_ganha_do_registro_sem_fase(app, db, admin):
 
 def test_a_evolucao_distingue_as_duas_fases_no_rotulo(app, db, admin):
     """As duas fases compartilham a data. Sem a fase no rótulo, o gráfico
-    mostraria dois pontos escritos exatamente igual."""
+    mostraria dois pontos escritos exatamente igual.
+
+    `user=admin` porque a 2ª fase é reservada ao admin enquanto a fórmula do
+    colégio não estiver confirmada — ver app/visibilidade.py."""
     _as_duas_fases(db, admin)
     aluno = db.session.scalar(db.select(Aluno).order_by(Aluno.id))
 
-    labels = evolucao_do_aluno(aluno.id)["labels"]
+    labels = evolucao_do_aluno(aluno.id, user=admin)["labels"]
 
     assert len(labels) == len(set(labels)), f"rótulos repetidos: {labels}"
     assert any("1ª fase" in x or "1a fase" in x.lower() for x in labels)
@@ -217,7 +220,7 @@ def test_a_ordem_da_evolucao_nao_fica_por_conta_do_banco(app, db, admin):
     _as_duas_fases(db, admin)
     aluno = db.session.scalar(db.select(Aluno).order_by(Aluno.id))
 
-    labels = evolucao_do_aluno(aluno.id)["labels"]
+    labels = evolucao_do_aluno(aluno.id, user=admin)["labels"]
 
     primeira = next(i for i, x in enumerate(labels) if "1ª fase" in x)
     segunda = next(i for i, x in enumerate(labels) if "2ª fase" in x)
@@ -230,7 +233,7 @@ def test_a_ficha_do_professor_distingue_as_fases(client, db, admin, logar):
     _as_duas_fases(db, admin)
     aluno = db.session.scalar(db.select(Aluno).order_by(Aluno.id))
 
-    provas = [s["prova"] for s in ficha_do_aluno(aluno)["simulados"]]
+    provas = [s["prova"] for s in ficha_do_aluno(aluno, user=admin)["simulados"]]
 
     assert len(provas) == len(set(provas)), f"a ficha repete o nome: {provas}"
 
