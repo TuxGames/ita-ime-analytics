@@ -197,8 +197,14 @@
         {% if ln.media_informada is not none %}
         <span class="chip chip-forte">média da planilha {{ "%.2f"|format(ln.media_informada) }}</span>
         {% endif %}
-        {% if ln.media_final_informada is not none %}
-        <span class="chip chip-forte">final {{ "%.2f"|format(ln.media_final_informada) }}</span>
+        {# Copiada quando a planilha traz a coluna (o caso comum); calculada só
+           como plano B, e aí a tela DIZ que é calculada — senão um número de
+           fórmula observada passa por número oficial do colégio. #}
+        {% set final = media_final_da_linha(ln) %}
+        {% if final %}
+        <span class="chip chip-forte">
+          final {{ "%.2f"|format(final[0]) }}{% if final[1] == "calculada" %} (calculada){% endif %}
+        </span>
         {% endif %}
       </div>
       {{ editar_linha(ln) }}

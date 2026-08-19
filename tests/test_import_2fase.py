@@ -162,7 +162,7 @@ def test_media_da_planilha_vai_para_media_informada(app):
 
 def test_media_final_e_campo_separado(app):
     payload = payload_simulado_discursivo()
-    payload["resultados"][0]["media_final"] = 5.65
+    payload["resultados"][0]["media_final_oficial"] = 5.65
 
     linha = _linha_de(_parse(payload))
 
@@ -412,3 +412,31 @@ def test_o_ranking_no_cliente_recebe_notas_e_fase(client, db, admin, logar):
 
     assert '"fase": "discursiva"' in corpo
     assert '"notas"' in corpo
+
+
+def test_campo_que_o_import_nao_le_gera_aviso(app):
+    """A guarda que nasceu de um erro real: o prompt passou a emitir
+    `media_final_oficial` e o parser continuou lendo `media_final`. A MÉDIA
+    FINAL sumia em silêncio — import verde, tela vazia, ninguém sabendo."""
+    payload = payload_simulado_discursivo()
+    payload["resultados"][0]["media_final"] = 5.65  # o nome ERRADO
+
+    avisos = _parse(payload)["avisos"]
+
+    assert any("media_final" in a and "DESCARTAR" in a for a in avisos)
+
+
+def test_o_nome_certo_nao_gera_aviso(app):
+    payload = payload_simulado_discursivo()
+    payload["resultados"][0]["media_final_oficial"] = 5.65
+
+    dados = _parse(payload)
+
+    assert dados["avisos"] == []
+    assert _linha_de(dados)["media_final_informada"] == 5.65
+
+
+def test_a_fixture_usa_os_mesmos_campos_do_prompt(app):
+    """Se a fixture divergir do prompt, os testes passam e o import real
+    quebra — que é exatamente o buraco que esta guarda fecha."""
+    assert _parse(payload_simulado_discursivo())["avisos"] == []

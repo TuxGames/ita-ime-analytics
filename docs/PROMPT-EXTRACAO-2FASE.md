@@ -97,7 +97,8 @@ FORMATO
       "status": "presente",
       "notas": { "MAT": 5.70, "FIS": 3.50, "QUIM": 5.70,
                  "PORT": 7.00, "ING": 8.50, "RED": 6.10 },
-      "media_oficial": 5.56
+      "media_oficial": 5.56,
+      "media_final_oficial": null
     },
     {
       "nome": "EDUARDO HENRIQUE SILVA CAVALCANTI",
@@ -105,7 +106,8 @@ FORMATO
       "status": "presente",
       "notas": { "MAT": 4.40, "FIS": 5.10, "QUIM": 3.80,
                  "PORT": 8.00, "ING": 7.50, "RED": 4.10 },
-      "media_oficial": 5.10
+      "media_oficial": 5.10,
+      "media_final_oficial": null
     },
     {
       "nome": "FULANO QUE NAO FEZ A DISCURSIVA",
@@ -160,7 +162,19 @@ CAMPOS DE CADA PESSOA
 - notas          — objeto código→número decimal, só com as matérias listadas em
                    "materias". Escreva com PONTO no JSON (5.70), mesmo que a
                    planilha use vírgula (5,70). Sempre 0 a 10.
-- media_oficial  — o valor da coluna de média, copiado. Ver a seção acima.
+- media_oficial  — o valor da coluna de média **do bloco DISCURSIVO**, copiado.
+                   Ver a seção acima. Nas planilhas de bloco único, é a única
+                   coluna de média que existe.
+- media_final_oficial
+                 — o valor da coluna **MÉDIA FINAL**, quando ela existir. Ela só
+                   aparece nas planilhas de dois blocos, é sempre a última, e
+                   costuma vir em azul. Copie como está.
+                   Use `null` quando a planilha não tiver essa coluna — que é o
+                   caso das planilhas de bloco único.
+                   **Não confunda com a MÉDIA do bloco discursivo.** Numa
+                   planilha de dois blocos existem TRÊS colunas de média: a do
+                   discursivo (vai em `media_oficial`), a da objetiva (ignore,
+                   ela é do outro prompt) e a MÉDIA FINAL (vai aqui).
 
 =============================================================================
 CÉLULA VAZIA NÃO É ZERO

@@ -62,6 +62,10 @@ def create_app(config_class=Config) -> Flask:
     app.jinja_env.filters["rotulo_curto"] = rotulo_curto
     app.jinja_env.globals["titulo_simulado"] = compor_titulo
 
+    from .media_final import media_final_da_linha
+
+    app.jinja_env.globals["media_final_da_linha"] = media_final_da_linha
+
     from .monograma import indice_de_cor, iniciais
 
     app.jinja_env.globals["iniciais_do_nome"] = iniciais

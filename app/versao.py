@@ -17,6 +17,13 @@ O 2.5.00 fechou o cadastro: conta nova so entra com codigo de convite. No
 2.7.00 o codigo virou credencial de visibilidade, e no 2.8.00 entrou o papel de
 professor — que so olha nota, nunca estudo.
 
+O `3.0.00` é a primeira virada de número grande desde o redesign, e ela junta
+duas coisas por decisão do dono do produto: a **página de termos** (o site
+passou a dizer, em texto público, o que faz com o nome das pessoas) e a **2ª
+fase dos simulados** (nota decimal, fase na chave da prova, import discursivo e
+média final). São mudanças de identidade do app, não de funcionalidade solta —
+por isso o primeiro número, e não o segundo.
+
 Foi assim que se chegou no 2.4.00: depois do redesign entraram o casamento de
 banca com fase (2.1), os grupos de estudo (2.2), o lote de monograma, renomear
 grupo e placar de notas (2.3), e agora o redesign das 29 telas restantes —
@@ -31,4 +38,4 @@ Um único lugar: quem precisar da versão importa daqui. No Jinja ela chega como
 o global `VERSAO`, registrado em app/__init__.py.
 """
 
-VERSAO = "2.8.00"
+VERSAO = "3.0.00"

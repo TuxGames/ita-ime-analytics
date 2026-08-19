@@ -234,6 +234,7 @@ def payload_simulado_discursivo(turma="novata", rotulo="S3", banca="ITA", **ajus
                 "notas": {"MAT": 6.00, "QUIM": 6.35, "FIS": 3.40,
                           "PORT": 6.67, "RED": 7.20},
                 "media_oficial": 5.67,
+                "media_final_oficial": None,
             },
             {
                 "nome": f"ALUNO {turma.upper()} DOIS",
@@ -243,6 +244,7 @@ def payload_simulado_discursivo(turma="novata", rotulo="S3", banca="ITA", **ajus
                 "notas": {"MAT": 3.80, "QUIM": 4.35, "FIS": 4.30,
                           "PORT": 6.00, "RED": 5.00},
                 "media_oficial": 4.49,
+                "media_final_oficial": None,
             },
             {
                 "nome": f"ALUNO {turma.upper()} TRES",

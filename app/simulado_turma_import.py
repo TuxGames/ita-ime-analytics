@@ -141,7 +141,11 @@ def _linha_discursiva(bruta, onde, nome, serie, turma, status, materias):
         # exato; o número da discursiva vive em campo próprio, sem carimbo.
         "media_oficial": None, "geral_oficial": None,
         "media_informada": numero("media_oficial"),
-        "media_final_informada": numero("media_final"),
+        # `media_final_oficial` é o nome que o prompt emite. Ler um nome
+        # diferente aqui perderia a MÉDIA FINAL em silêncio — que é o pior
+        # jeito de errar: o import passa, a tela fica vazia e ninguém sabe.
+        # `_avisos_de_campo_desconhecido` existe para pegar essa classe inteira.
+        "media_final_informada": numero("media_final_oficial"),
     }
 
 
@@ -241,6 +245,40 @@ PESOS_MEDIA_ITA_DISCURSIVA = {
 
 # Divergência tolerada antes de avisar: a planilha mostra 2 casas.
 TOLERANCIA_MEDIA = 0.01
+
+
+# Tudo que `_linha` e `_linha_discursiva` sabem ler de uma pessoa. Chave fora
+# desta lista é campo que o extrator produziu e o import descarta.
+CAMPOS_DA_PESSOA = {
+    "nome", "serie", "status", "acertos", "notas",
+    "media_oficial", "geral_oficial", "media_final_oficial",
+}
+
+
+def _avisos_de_campo_desconhecido(brutos) -> list:
+    """Avisa quando o JSON traz campo que o import não lê.
+
+    Esta guarda nasceu de um erro real: o prompt passou a emitir
+    `media_final_oficial` e o parser continuou lendo `media_final`. O import
+    passava, a coluna MÉDIA FINAL sumia e nada reclamava — dado perdido em
+    silêncio, que é o pior modo de falha possível.
+
+    Avisa em vez de bloquear, pelo mesmo motivo dos outros avisos: um extrator
+    que acrescenta um campo inofensivo não deve travar a importação da turma.
+    Mas o admin vê, na tela, antes de confirmar.
+    """
+    desconhecidos = set()
+    for bruta in brutos:
+        if isinstance(bruta, dict):
+            desconhecidos |= set(bruta) - CAMPOS_DA_PESSOA
+    if not desconhecidos:
+        return []
+    return [
+        "O JSON traz campo(s) que o import não lê e vai DESCARTAR: "
+        + ", ".join(sorted(desconhecidos))
+        + ". Confira se o prompt de extração e o import estão falando a mesma "
+        "língua antes de confirmar."
+    ]
 
 
 def _avisos_de_media(banca, fase, materias, linhas) -> list:
@@ -400,7 +438,10 @@ def parse(texto: str, data_padrao=None) -> dict:
         "fase": fase, "fonte": fonte, "materias": materias,
         "materias_media": materias_media, "questoes": questoes,
         "linhas": linhas, "resumo": resumo,
-        "avisos": _avisos_de_media(banca, fase, materias, linhas),
+        "avisos": (
+            _avisos_de_campo_desconhecido(brutos)
+            + _avisos_de_media(banca, fase, materias, linhas)
+        ),
     }
 
 
