@@ -147,12 +147,32 @@ def test_mesma_pessoa_em_duas_turmas(app, db, admin):
         aplicar(db, _parse(outro), admin.id)
 
 
-def test_fase_divergente_entre_turmas(app, db, admin):
+def test_as_duas_fases_sao_provas_distintas(app, db, admin):
+    """Antes da 2ª fase existir, importar a discursiva por cima da objetiva era
+    um erro ("já foi importado como fase X"). Agora é o caso normal: a planilha
+    "ITA S5 - 1ª e 2ª fase" traz as duas, e elas viram duas provas.
+
+    O que NÃO pode acontecer é a segunda apagar a primeira — era exatamente
+    isso que o ramo de reimport de `aplicar()` faria se a busca ignorasse a
+    fase.
+    """
     aplicar(db, _parse(payload_simulado("novata")), admin.id)
     db.session.commit()
+    linhas_da_objetiva = len(
+        db.session.scalar(db.select(SimuladoTurma)).linhas
+    )
 
-    with pytest.raises(ErroImport, match="fase"):
-        aplicar(db, _parse(payload_simulado("veterana", fase="discursiva")), admin.id)
+    aplicar(db, _parse(payload_simulado("novata", fase="discursiva")), admin.id)
+    db.session.commit()
+
+    provas = db.session.scalars(
+        db.select(SimuladoTurma).order_by(SimuladoTurma.fase)
+    ).all()
+    assert [p.fase for p in provas] == ["discursiva", "objetiva"]
+    objetiva = next(p for p in provas if p.fase == "objetiva")
+    assert len(objetiva.linhas) == linhas_da_objetiva, (
+        "importar a 2ª fase apagou as linhas da 1ª"
+    )
 
 
 # --------------------------------------------------------------------------

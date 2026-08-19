@@ -72,6 +72,32 @@ def sugerir_concurso(linha: "SimuladoTurmaLinha", mapa_bancas: dict) -> "Concurs
     return casar_concurso(candidatos, turma.banca, turma.fase)[1]
 
 
+def simulado_pessoal_da_prova(user_id: int, turma: "SimuladoTurma"):
+    """O Simulado pessoal do usuário correspondente a ESTA prova, ou None.
+
+    Antes de a 2ª fase existir, a busca era só `(user_id, rotulo)`. Com duas
+    fases o rótulo deixou de identificar a prova: o S5 objetivo e o S5
+    discursivo são registros diferentes, e sem a fase a sincronização da 2ª
+    fase sobrescreveria a 1ª.
+
+    A pegadinha é que `Simulado.fase` é ANULÁVEL: quem digitou à mão pode não
+    ter dito a fase. Um `filter_by(fase=...)` seco deixaria de casar com esses
+    registros e passaria a criar um segundo simulado ao lado — quebrando
+    justamente a promessa de que registro manual nunca é tocado. Por isso a
+    busca casa a fase exata OU a fase nula, e ordena para a exata vir primeiro:
+    um "S5" digitado sem fase protege as duas fases, que é o lado seguro do
+    erro."""
+    return db.session.scalars(
+        db.select(Simulado)
+        .filter(
+            Simulado.user_id == user_id,
+            Simulado.rotulo == turma.rotulo,
+            db.or_(Simulado.fase == turma.fase, Simulado.fase.is_(None)),
+        )
+        .order_by(Simulado.fase.is_(None), Simulado.id)
+    ).first()
+
+
 def opcoes_de_concurso(turma: "SimuladoTurma", concursos: list) -> tuple:
     """`(compativeis, outros, sugestao)` para montar o `<select>` de concurso.
 
@@ -128,9 +154,7 @@ def sincronizar_linha(linha: "SimuladoTurmaLinha", concurso: "Concurso", user_id
         return None
     notas, nota_geral, posicao = calculado
 
-    existente = db.session.scalar(
-        db.select(Simulado).filter_by(user_id=user_id, rotulo=turma.rotulo)
-    )
+    existente = simulado_pessoal_da_prova(user_id, turma)
     if existente is not None and not existente.veio_de_import:
         return None  # registro manual: não toca
 

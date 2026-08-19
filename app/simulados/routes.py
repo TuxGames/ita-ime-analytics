@@ -37,6 +37,7 @@ from ..models import (
 from ..oficiais_import import ErroImport, materias_da_query
 from ..simulado_sync import (
     linhas_pendentes,
+    simulado_pessoal_da_prova,
     opcoes_de_concurso,
     ressincronizar_simulado,
     simulados_desatualizados,
@@ -388,8 +389,12 @@ def _get_turma(turma_id: int) -> SimuladoTurma:
 @exige_convite
 def turma_listar():
     turmas = db.session.scalars(
+        # A fase desempata: as duas fases da mesma prova têm data, banca e
+        # rótulo iguais, e sem isto ficariam coladas em ordem arbitrária,
+        # parecendo import duplicado.
         db.select(SimuladoTurma).order_by(
-            SimuladoTurma.data.desc(), SimuladoTurma.banca, SimuladoTurma.rotulo
+            SimuladoTurma.data.desc(), SimuladoTurma.banca, SimuladoTurma.rotulo,
+            SimuladoTurma.fase.desc(),
         )
     ).all()
     minhas = db.session.scalars(
@@ -418,9 +423,12 @@ def turma_importar():
         except ErroImport as exc:
             form.payload.errors.append(str(exc))
         else:
+            # `fase` na busca: sem ela o preview de uma 2ª fase encontraria a
+            # 1ª e diria "já existe", mostrando a prova errada ao admin.
             existente = db.session.scalar(
                 db.select(SimuladoTurma).filter_by(
-                    banca=dados["banca"], rotulo=dados["rotulo"], data=dados["data"]
+                    banca=dados["banca"], rotulo=dados["rotulo"],
+                    data=dados["data"], fase=dados["fase"],
                 )
             )
             if request.form.get("acao") == "confirmar":
@@ -515,11 +523,7 @@ def turma_detalhe(turma_id):
     )
     meu_simulado = None
     if minha_linha is not None:
-        meu_simulado = db.session.scalar(
-            db.select(Simulado).filter_by(
-                user_id=current_user.id, rotulo=turma.rotulo
-            )
-        )
+        meu_simulado = simulado_pessoal_da_prova(current_user.id, turma)
 
     # O JS recalcula o ranking no recorte de matérias; só as linhas do filtro de
     # turma ativo vão para ele, para as posições renumerarem dentro do recorte.
@@ -753,9 +757,7 @@ def turma_trazer(turma_id):
         flash("Escolha para qual concurso esse simulado conta.", "error")
         return redirect(url_for("simulados.turma_detalhe", turma_id=turma.id))
 
-    existente = db.session.scalar(
-        db.select(Simulado).filter_by(user_id=current_user.id, rotulo=turma.rotulo)
-    )
+    existente = simulado_pessoal_da_prova(current_user.id, turma)
     if existente is not None and not existente.veio_de_import:
         flash(
             f"Você já lançou o {turma.rotulo} à mão. Não vou sobrescrever — "

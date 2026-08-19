@@ -19,6 +19,7 @@ ninguém saber qual está certo.
 
 from .evolucao import evolucao_do_aluno, linhas_do_aluno_em_ordem
 from .extensions import db
+from .grouping import compor_titulo
 from .models import Aluno, Materia, ResultadoLinha
 
 # Chaves que a ficha PODE conter. Qualquer coisa fora desta lista é vazamento —
@@ -70,7 +71,9 @@ def ficha_do_aluno(aluno: "Aluno", materias=None) -> dict:
             None,
         )
         simulados.append({
-            "prova": f"{turma.banca} {turma.rotulo}",
+            # Com a fase: as duas fases da mesma prova são duas linhas aqui, e
+            # sem ela as duas apareceriam escritas "ITA S5".
+            "prova": compor_titulo(turma.banca, turma.rotulo, turma.fase),
             "data": turma.data,
             "fase": turma.fase,
             "turma": linha.turma,

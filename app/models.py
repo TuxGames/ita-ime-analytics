@@ -517,9 +517,14 @@ class SimuladoTurma(db.Model):
 
     __tablename__ = "simulados_turma"
     # A data entra na chave porque "S5" repete todo ano: sem ela, dois simulados
-    # de anos diferentes com o mesmo rótulo colidiriam.
+    # de anos diferentes com o mesmo rótulo colidiriam. A FASE entra porque as
+    # duas fases do mesmo simulado compartilham banca, rótulo e data — a
+    # planilha "ITA S5 - 1ª e 2ª fase" traz as duas lado a lado, com conjuntos
+    # de matérias diferentes, e sem isto uma sobrescreveria a outra.
     __table_args__ = (
-        db.UniqueConstraint("banca", "rotulo", "data", name="uq_simulados_turma_prova"),
+        db.UniqueConstraint(
+            "banca", "rotulo", "data", "fase", name="uq_simulados_turma_prova"
+        ),
     )
 
     FASES = ("objetiva", "discursiva")
@@ -531,6 +536,11 @@ class SimuladoTurma(db.Model):
     # Só a objetiva é importável hoje; o campo existe para a discursiva entrar
     # depois sem outra migration de schema.
     fase = db.Column(db.String(20), nullable=False, default="objetiva")
+    # Alguns títulos trazem DUAS datas ("Simulado IME S6 - 11/07/2026 -
+    # 14/04/2026"). Não sabemos qual é qual, e é justamente essa a pista para
+    # descobrir se a coluna "Média" daquela planilha é da fase ou já é final.
+    # Jogar fora seria perder a evidência, então guardamos sem interpretar.
+    data_secundaria = db.Column(db.Date, nullable=True)
     fonte = db.Column(db.String(40), nullable=True)
     materias_csv = db.Column(db.String(200), nullable=False, default="")
     # Matérias que compõem a MÉDIA oficial do colégio (para o atalho "Oficial").
@@ -611,7 +621,25 @@ class SimuladoTurma(db.Model):
         6,50). No ITA (12 questões em todas as matérias) essa fórmula coincide
         com a média simples dos percentuais, então não muda nada relativo ao
         ITA — a diferença só aparece quando as matérias têm pesos diferentes,
-        como no IME."""
+        como no IME.
+
+        Na 2ª fase (discursiva) não há total de questões: a nota já nasce em
+        0–10 por matéria. Aí a régua é a MÉDIA SIMPLES das matérias do recorte.
+
+        Isso NÃO tenta reproduzir a média da planilha, e a diferença é
+        proposital. No ITA a média do discursivo pesa exatas em dobro
+        ((2·MAT + 2·QUÍ + 2·FIS + POR + RED) / 8), mas essa fórmula é
+        observada, não publicada, e o colégio pode mudá-la sem avisar. O número
+        oficial é `linha.media_informada`, copiado da planilha, e é ele que as
+        telas mostram como média. O que sai daqui serve para ORDENAR o ranking
+        dentro do recorte de matérias que a pessoa escolheu — comparação
+        calculada pelo app, que não se apresenta como número do colégio."""
+        if self.fase == "discursiva":
+            valores = [
+                linha.notas[m.name] for m in materias if linha.notas.get(m.name) is not None
+            ]
+            return round(sum(valores) / len(valores), 2) if valores else None
+
         acertos, questoes = linha.acertos, self.questoes
         soma_acertos, soma_questoes = 0, 0
         for materia in materias:
@@ -666,6 +694,25 @@ class SimuladoTurmaLinha(db.Model):
     acertos_json = db.Column(db.Text, nullable=True)
     media_oficial = db.Column(db.Float, nullable=True)
     geral_oficial = db.Column(db.Float, nullable=True)
+    # {"MATEMATICA": 5.7, ...} — NOTAS decimais 0–10 da 2ª fase (discursiva).
+    # Coluna separada de `acertos_json` de propósito: lá são questões CERTAS,
+    # inteiras, sobre um total. Aqui a nota já nasce em 0–10 e não há total de
+    # questões. Guardar as duas coisas na mesma coluna faria cada um dos ~14
+    # leitores precisar saber a fase para interpretar o número — e quem errasse
+    # não quebraria, mostraria "5.7/12" como se fosse acerto de questão. Assim,
+    # leitor que não conhece a 2ª fase vê `acertos` vazio e some, em vez de
+    # mentir. Os conjuntos de matérias também diferem: no ITA S5 o discursivo
+    # tem POR e RED e não tem ING; a objetiva tem ING e não tem POR nem RED.
+    notas_json = db.Column(db.Text, nullable=True)
+    # A coluna de média do bloco desta planilha, COPIADA. Deliberadamente sem
+    # carimbo de significado: no ITA sabemos que é a média do discursivo, mas
+    # na planilha do IME S6 há uma coluna "Média" só, que não se reproduz a
+    # partir das seis matérias dela — pode já ser a média final. Até o colégio
+    # responder, o app guarda o número e não afirma o que ele é.
+    media_informada = db.Column(db.Float, nullable=True)
+    # A coluna MÉDIA FINAL, só quando a planilha traz as duas fases lado a lado
+    # e a nomeia explicitamente. NULL quando não existe — nunca calculada.
+    media_final_informada = db.Column(db.Float, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     # Marca edição manual do admin. Um reimport da turma NÃO apaga uma linha
     # editada silenciosamente — ele só avisa no preview (ver B.1 do plano).
@@ -687,6 +734,19 @@ class SimuladoTurmaLinha(db.Model):
 
     def set_acertos(self, acertos: dict) -> None:
         self.acertos_json = json.dumps(acertos) if acertos else None
+
+    @property
+    def notas(self) -> dict:
+        """Notas decimais da 2ª fase. Vazio numa linha de 1ª fase."""
+        if not self.notas_json:
+            return {}
+        try:
+            return json.loads(self.notas_json)
+        except ValueError:
+            return {}
+
+    def set_notas(self, notas: dict) -> None:
+        self.notas_json = json.dumps(notas) if notas else None
 
     @property
     def turma_label(self) -> str:

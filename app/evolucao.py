@@ -8,6 +8,7 @@ consulta, outro sujeito.
 """
 
 from .extensions import db
+from .grouping import compor_titulo
 from .models import Materia, SimuladoTurma, SimuladoTurmaLinha
 
 
@@ -77,7 +78,10 @@ def linhas_do_aluno_em_ordem(aluno_id: int) -> list["SimuladoTurmaLinha"]:
         db.select(SimuladoTurmaLinha)
         .join(SimuladoTurma, SimuladoTurmaLinha.turma_id == SimuladoTurma.id)
         .filter(SimuladoTurmaLinha.aluno_id == aluno_id, SimuladoTurmaLinha.status == "presente")
-        .order_by(SimuladoTurma.data)
+        # Desempate explícito: as duas fases da mesma prova têm a MESMA data, e
+        # sem isto a ordem entre elas ficaria por conta do banco. Objetiva
+        # antes de discursiva é a ordem em que a pessoa fez as provas.
+        .order_by(SimuladoTurma.data, SimuladoTurma.fase.desc())
     ).all()
 
 
@@ -89,8 +93,14 @@ def evolucao_do_aluno(aluno_id: int, materias=None) -> dict:
     `materias`: recorte da Fase D (lista de Materia) ou None para "todas"."""
     linhas = linhas_do_aluno_em_ordem(aluno_id)
 
+    # A fase entra no rótulo porque as duas fases da mesma prova compartilham
+    # banca, rótulo E data: sem ela o gráfico mostraria dois pontos escritos
+    # exatamente igual, e ninguém saberia qual é qual. `compor_titulo` é a
+    # mesma função que nomeia o simulado pessoal, para os nomes não divergirem.
     labels = [
-        f"{ln.turma_obj.nome} · {ln.turma_obj.data.strftime('%d/%m/%Y')}" for ln in linhas
+        f"{compor_titulo(ln.turma_obj.banca, ln.turma_obj.rotulo, ln.turma_obj.fase)}"
+        f" · {ln.turma_obj.data.strftime('%d/%m/%Y')}"
+        for ln in linhas
     ]
 
     posicoes, percentis = [], []

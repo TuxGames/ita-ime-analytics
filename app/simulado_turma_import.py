@@ -260,11 +260,10 @@ def _conferir_cabecalho(existente: SimuladoTurma, dados: dict) -> None:
             f"O total de questões de {existente.nome} não bate com o da outra "
             f"turma ({existente.questoes} vs {dados['questoes']})."
         )
-    if existente.fase != dados["fase"]:
-        raise ErroImport(
-            f"{existente.nome} já foi importado como fase '{existente.fase}' e "
-            f"este JSON diz '{dados['fase']}'."
-        )
+    # Não há mais checagem de fase aqui: desde que `fase` entrou na chave única
+    # (d7b2e94a1c60), duas fases são duas provas distintas, e `aplicar()` só
+    # chega neste ponto com a prova da MESMA fase. A checagem antiga nunca mais
+    # dispararia — e guarda que não dispara vira comentário que mente.
 
 
 def _conferir_conflitos_entre_turmas(existente: SimuladoTurma, dados: dict) -> None:
@@ -286,11 +285,16 @@ def _conferir_conflitos_entre_turmas(existente: SimuladoTurma, dados: dict) -> N
 def aplicar(db, dados: dict, user_id: int) -> SimuladoTurma:
     """Grava o ranking validado, substituindo APENAS a turma que veio no JSON.
 
-    A prova é uma só (chave banca+rótulo+data): reimportar a novata não pode
-    encostar na veterana, então o delete é filtrado por turma."""
+    A prova é uma só (chave banca+rótulo+data+FASE): reimportar a novata não
+    pode encostar na veterana, então o delete é filtrado por turma.
+
+    A `fase` na busca não é detalhe: sem ela, importar a 2ª fase encontraria a
+    linha da 1ª e cairia no ramo de reimport logo abaixo, que apaga as linhas
+    daquela turma antes de gravar as novas. A objetiva sumiria em silêncio."""
     simulado = db.session.scalar(
         db.select(SimuladoTurma).filter_by(
-            banca=dados["banca"], rotulo=dados["rotulo"], data=dados["data"]
+            banca=dados["banca"], rotulo=dados["rotulo"], data=dados["data"],
+            fase=dados["fase"],
         )
     )
 
